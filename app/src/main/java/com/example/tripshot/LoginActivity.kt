@@ -1,5 +1,6 @@
 package com.example.tripshot
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -82,17 +83,23 @@ class LoginActivity : ComponentActivity() {
                     AuthRoot(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
+                            .padding(innerPadding),
+                        onAuthSuccess = { navigateToMainActivity() }
                     )
                 }
             }
         }
     }
+
+    private fun navigateToMainActivity() {
+        startActivity(Intent(this, MainActivity::class.java))
+        finish()
+    }
 }
 
 // ─── Root that owns the current-screen state ──────────────────────────────────
 @Composable
-fun AuthRoot(modifier: Modifier = Modifier) {
+fun AuthRoot(modifier: Modifier = Modifier, onAuthSuccess: () -> Unit = {}) {
     var currentScreen by rememberSaveable { mutableStateOf(AuthScreen.LOGIN) }
 
     Column(
@@ -135,10 +142,12 @@ fun AuthRoot(modifier: Modifier = Modifier) {
         ) { screen ->
             when (screen) {
                 AuthScreen.LOGIN -> LoginContent(
-                    onGoToSignup = { currentScreen = AuthScreen.SIGNUP }
+                    onGoToSignup = { currentScreen = AuthScreen.SIGNUP },
+                    onAuthSuccess = onAuthSuccess
                 )
                 AuthScreen.SIGNUP -> SignupContent(
-                    onGoToLogin = { currentScreen = AuthScreen.LOGIN }
+                    onGoToLogin = { currentScreen = AuthScreen.LOGIN },
+                    onAuthSuccess = onAuthSuccess
                 )
             }
         }
@@ -228,7 +237,7 @@ fun authFieldColors() = OutlinedTextFieldDefaults.colors(
 
 // ─── Login screen ─────────────────────────────────────────────────────────────
 @Composable
-fun LoginContent(onGoToSignup: () -> Unit) {
+fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     var email    by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
@@ -334,7 +343,7 @@ fun LoginContent(onGoToSignup: () -> Unit) {
         Spacer(modifier = Modifier.height(28.dp))
 
         Button(
-            onClick = { /* TODO: handle login */ },
+            onClick = onAuthSuccess,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -378,7 +387,7 @@ fun LoginContent(onGoToSignup: () -> Unit) {
 
 // ─── Sign up screen ───────────────────────────────────────────────────────────
 @Composable
-fun SignupContent(onGoToLogin: () -> Unit) {
+fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     var name            by rememberSaveable { mutableStateOf("") }
     var email           by rememberSaveable { mutableStateOf("") }
     var password        by rememberSaveable { mutableStateOf("") }
@@ -547,7 +556,7 @@ fun SignupContent(onGoToLogin: () -> Unit) {
         Spacer(modifier = Modifier.height(28.dp))
 
         Button(
-            onClick = { /* TODO: handle signup */ },
+            onClick = onAuthSuccess,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
