@@ -1,3 +1,58 @@
 <resources>
     <string name="app_name">TripShot</string>
+
+    <!-- Authentication -->
+    <string name="app_title">TripShot</string>
+    <string name="tab_login">Login</string>
+    <string name="tab_signup">Sign up</string>
+    <string name="welcome_back">Welcome Back</string>
+    <string name="welcome_subtitle">Enter your details to continue your journey.</string>
+    <string name="create_account_title">Create Account</string>
+    <string name="signup_subtitle">Join the community and start your journey.</string>
+
+    <!-- Form Labels -->
+    <string name="label_full_name">FULL NAME</string>
+    <string name="label_email">EMAIL ADDRESS</string>
+    <string name="label_password">PASSWORD</string>
+    <string name="label_confirm_password">CONFIRM PASSWORD</string>
+
+    <!-- Placeholders -->
+    <string name="placeholder_name">Alex Explorer</string>
+    <string name="placeholder_email">alex@explorer.com</string>
+    <string name="placeholder_password">••••••••</string>
+
+    <!-- Content Descriptions -->
+    <string name="content_desc_name">Name</string>
+    <string name="content_desc_email">Email</string>
+    <string name="content_desc_password">Password</string>
+    <string name="content_desc_confirm_password">Confirm Password</string>
+
+    <!-- Buttons and Links -->
+    <string name="show_password">Show</string>
+    <string name="hide_password">Hide</string>
+    <string name="forgot_password">Forgot?</string>
+    <string name="login_button">Start Exploring</string>
+    <string name="signup_button">Join the Community</string>
+
+    <!-- Account Links -->
+    <string name="no_account_text">Don\'t have an account?</string>
+    <string name="signup_link">Join the community</string>
+    <string name="have_account_text">Already have an account?</string>
+    <string name="login_link">Log in</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">home</string>
+    <string name="nav_home_label">Home</string>
+    <string name="nav_explore">explore</string>
+    <string name="nav_explore_label">Explore</string>
+    <string name="nav_create">create</string>
+    <string name="nav_create_label">Create</string>
+    <string name="nav_profile">profile</string>
+    <string name="nav_profile_label">Profile</string>
+
+    <!-- Screen Titles -->
+    <string name="screen_home">Home</string>
+    <string name="screen_explore">Explore</string>
+    <string name="screen_create">Create</string>
+    <string name="screen_profile">Profile</string>
 </resources>

@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -106,7 +107,7 @@ fun AuthRoot(modifier: Modifier = Modifier, onAuthSuccess: () -> Unit = {}) {
     ) {
         // App title
         Text(
-            text = "TripShot",
+            text = stringResource(R.string.app_title),
             color = TripShotTextPrimary,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
@@ -183,7 +184,7 @@ fun AnimatedTabBar(
         )
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            listOf(AuthScreen.LOGIN to "Login", AuthScreen.SIGNUP to "Sign up")
+            listOf(AuthScreen.LOGIN to stringResource(R.string.tab_login), AuthScreen.SIGNUP to stringResource(R.string.tab_signup))
                 .forEach { (screen, label) ->
                     val isSelected = currentScreen == screen
                     Box(
@@ -246,7 +247,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             .verticalScroll(rememberScrollState())
     ) {
         Text(
-            text = "Welcome Back",
+            text = stringResource(R.string.welcome_back),
             color = TripShotTextPrimary,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
@@ -255,7 +256,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Enter your details to continue your journey.",
+            text = stringResource(R.string.welcome_subtitle),
             color = TripShotTextSecondary,
             style = MaterialTheme.typography.bodyLarge
         )
@@ -263,7 +264,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
-            text = "EMAIL ADDRESS",
+            text = stringResource(R.string.label_email),
             color = TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
@@ -275,12 +276,12 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             value = email,
             onValueChange = { email = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("alex@explorer.com", color = TripShotHint) },
+            placeholder = { Text(stringResource(R.string.placeholder_email), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Email,
-                    contentDescription = "Email",
+                    contentDescription = stringResource(R.string.content_desc_email),
                     tint = TripShotHint
                 )
             },
@@ -296,13 +297,13 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "PASSWORD",
+                text = stringResource(R.string.label_password),
                 color = TripShotTextSecondary,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
             TextButton(onClick = {}) {
-                Text("Forgot?", color = TripShotPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.forgot_password), color = TripShotPrimary, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -312,19 +313,19 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             value = password,
             onValueChange = { password = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("••••••••", color = TripShotHint) },
+            placeholder = { Text(stringResource(R.string.placeholder_password), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Password",
+                    contentDescription = stringResource(R.string.content_desc_password),
                     tint = TripShotHint
                 )
             },
             trailingIcon = {
                 TextButton(onClick = { passwordVisible = !passwordVisible }) {
                     Text(
-                        text = if (passwordVisible) "Hide" else "Show",
+                        text = if (passwordVisible) stringResource(R.string.hide_password) else stringResource(R.string.show_password),
                         color = TripShotHint
                     )
                 }
@@ -351,7 +352,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
                 contentColor = Color.White
             )
         ) {
-            Text("Start Exploring", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.login_button), fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -362,7 +363,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Don't have an account?", color = TripShotTextSecondary,
+                stringResource(R.string.no_account_text), color = TripShotTextSecondary,
                 style = MaterialTheme.typography.bodySmall
             )
             TextButton(
@@ -370,7 +371,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Text(
-                    text = "Join the community",
+                    text = stringResource(R.string.signup_link),
                     color = TripShotPrimary,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall
@@ -396,7 +397,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             .verticalScroll(rememberScrollState())
     ) {
         Text(
-            text = "Create Account",
+            text = stringResource(R.string.create_account_title),
             color = TripShotTextPrimary,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
@@ -405,7 +406,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Join the community and start your journey.",
+            text = stringResource(R.string.signup_subtitle),
             color = TripShotTextSecondary,
             style = MaterialTheme.typography.bodyLarge
         )
@@ -413,7 +414,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
-            text = "FULL NAME",
+            text = stringResource(R.string.label_full_name),
             color = TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
@@ -425,12 +426,12 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             value = name,
             onValueChange = { name = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Alex Explorer", color = TripShotHint) },
+            placeholder = { Text(stringResource(R.string.placeholder_name), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Person,
-                    contentDescription = "Name",
+                    contentDescription = stringResource(R.string.content_desc_name),
                     tint = TripShotHint
                 )
             },
@@ -441,7 +442,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "EMAIL ADDRESS",
+            text = stringResource(R.string.label_email),
             color = TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
@@ -453,12 +454,12 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             value = email,
             onValueChange = { email = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("alex@explorer.com", color = TripShotHint) },
+            placeholder = { Text(stringResource(R.string.placeholder_email), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Email,
-                    contentDescription = "Email",
+                    contentDescription = stringResource(R.string.content_desc_email),
                     tint = TripShotHint
                 )
             },
@@ -469,7 +470,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "PASSWORD",
+            text = stringResource(R.string.label_password),
             color = TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
@@ -481,19 +482,19 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             value = password,
             onValueChange = { password = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("••••••••", color = TripShotHint) },
+            placeholder = { Text(stringResource(R.string.placeholder_password), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Password",
+                    contentDescription = stringResource(R.string.content_desc_password),
                     tint = TripShotHint
                 )
             },
             trailingIcon = {
                 TextButton(onClick = { passwordVisible = !passwordVisible }) {
                     Text(
-                        text = if (passwordVisible) "Hide" else "Show",
+                        text = if (passwordVisible) stringResource(R.string.hide_password) else stringResource(R.string.show_password),
                         color = TripShotHint
                     )
                 }
@@ -510,7 +511,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "CONFIRM PASSWORD",
+            text = stringResource(R.string.label_confirm_password),
             color = TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
@@ -522,19 +523,19 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("••••••••", color = TripShotHint) },
+            placeholder = { Text(stringResource(R.string.placeholder_password), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Confirm Password",
+                    contentDescription = stringResource(R.string.content_desc_confirm_password),
                     tint = TripShotHint
                 )
             },
             trailingIcon = {
                 TextButton(onClick = { confirmVisible = !confirmVisible }) {
                     Text(
-                        text = if (confirmVisible) "Hide" else "Show",
+                        text = if (confirmVisible) stringResource(R.string.hide_password) else stringResource(R.string.show_password),
                         color = TripShotHint
                     )
                 }
@@ -561,7 +562,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
                 contentColor = Color.White
             )
         ) {
-            Text("Join the Community", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.signup_button), fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -572,7 +573,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Already have an account? ", color = TripShotTextSecondary,
+                stringResource(R.string.have_account_text), color = TripShotTextSecondary,
                 style = MaterialTheme.typography.bodySmall
             )
             TextButton(
@@ -580,7 +581,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
                 contentPadding = PaddingValues(0.dp),
             ) {
                 Text(
-                    text = "Log in",
+                    text = stringResource(R.string.login_link),
                     color = TripShotPrimary,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall
