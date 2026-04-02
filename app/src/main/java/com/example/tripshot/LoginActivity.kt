@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -13,7 +14,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,7 +34,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -52,13 +54,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.tripshot.ui.theme.TripShotBgColor
+import com.example.tripshot.ui.theme.TripShotHint
+import com.example.tripshot.ui.theme.TripShotPrimary
+import com.example.tripshot.ui.theme.TripShotSurfaceColor
+import com.example.tripshot.ui.theme.TripShotTabBgColor
+import com.example.tripshot.ui.theme.TripShotTextPrimary
+import com.example.tripshot.ui.theme.TripShotTextSecondary
 import com.example.tripshot.ui.theme.TripShotTheme
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.ui.unit.Dp
-import com.example.tripshot.ui.theme.*
 
 // ─── Screen enum ──────────────────────────────────────────────────────────────
 enum class AuthScreen { LOGIN, SIGNUP }
@@ -136,6 +142,7 @@ fun AuthRoot(modifier: Modifier = Modifier, onAuthSuccess: () -> Unit = {}) {
                     onGoToSignup = { currentScreen = AuthScreen.SIGNUP },
                     onAuthSuccess = onAuthSuccess
                 )
+
                 AuthScreen.SIGNUP -> SignupContent(
                     onGoToLogin = { currentScreen = AuthScreen.LOGIN },
                     onAuthSuccess = onAuthSuccess
@@ -229,7 +236,7 @@ fun authFieldColors() = OutlinedTextFieldDefaults.colors(
 // ─── Login screen ─────────────────────────────────────────────────────────────
 @Composable
 fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
-    var email    by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -347,29 +354,26 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             Text("Start Exploring", fontWeight = FontWeight.Bold)
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
-
-        OrDivider()
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        SocialButtons()
-
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Don't have an account? ", color = TripShotTextSecondary)
+            Text(
+                "Don't have an account?", color = TripShotTextSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
             TextButton(
                 onClick = onGoToSignup,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                contentPadding = PaddingValues(0.dp)
             ) {
                 Text(
                     text = "Join the community",
                     color = TripShotPrimary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }
@@ -379,12 +383,12 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
 // ─── Sign up screen ───────────────────────────────────────────────────────────
 @Composable
 fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
-    var name            by rememberSaveable { mutableStateOf("") }
-    var email           by rememberSaveable { mutableStateOf("") }
-    var password        by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var confirmVisible  by rememberSaveable { mutableStateOf(false) }
+    var confirmVisible by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -560,82 +564,28 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             Text("Join the Community", fontWeight = FontWeight.Bold)
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
-
-        OrDivider()
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        SocialButtons()
-
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Already have an account? ", color = TripShotTextSecondary)
+            Text(
+                "Already have an account? ", color = TripShotTextSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
             TextButton(
                 onClick = onGoToLogin,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                contentPadding = PaddingValues(0.dp),
             ) {
                 Text(
                     text = "Log in",
                     color = TripShotPrimary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
-        }
-    }
-}
-
-// ─── Shared composables ───────────────────────────────────────────────────────
-@Composable
-fun OrDivider() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Divider(modifier = Modifier.weight(1f), color = TripShotDividerColor)
-        Text(
-            text = " OR CONTINUE WITH ",
-            color = TripShotTextSecondary,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Divider(modifier = Modifier.weight(1f), color = TripShotDividerColor)
-    }
-}
-
-@Composable
-fun SocialButtons() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Button(
-            onClick = { /* TODO: Google auth */ },
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(100.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = TripShotSurfaceColor,
-                contentColor = TripShotTextPrimary
-            )
-        ) {
-            Text("Google")
-        }
-
-        Button(
-            onClick = { /* TODO: Apple auth */ },
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(100.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = TripShotSurfaceColor,
-                contentColor = TripShotTextPrimary
-            )
-        ) {
-            Text("Apple")
         }
     }
 }
