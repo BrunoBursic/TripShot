@@ -32,6 +32,7 @@ import com.example.tripshot.screens.ExploreScreen
 import com.example.tripshot.screens.HomeScreen
 import com.example.tripshot.screens.ProfileScreen
 import com.example.tripshot.ui.theme.TripShotTheme
+import com.example.tripshot.ui.theme.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,7 +83,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                 },
                 selected = currentRoute == item.route,
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color(0xFFD26319)
+                    indicatorColor = TripShotNavIndicator
                 ),
                 onClick = {
                     navController.navigate(item.route) {
