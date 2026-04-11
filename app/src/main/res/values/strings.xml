@@ -76,4 +76,35 @@
 
     <string name="profile_cd_avatar">Profile photo</string>
     <string name="profile_cd_trip">Trip image</string>
+
+    <!-- Create Trip Screen -->
+    <string name="create_trip_title">Create Trip</string>
+    <string name="create_trip_save">Save</string>
+    <string name="create_trip_button">Create Trip</string>
+    <string name="create_trip_change_cover">CHANGE COVER</string>
+    <string name="create_trip_trip_name">TRIP NAME</string>
+    <string name="create_trip_trip_name_placeholder">e.g. Alpine Summer Escape</string>
+    <string name="create_trip_start_date">START DATE</string>
+    <string name="create_trip_end_date">END DATE</string>
+    <string name="create_trip_select_time">Select Time</string>
+    <string name="create_trip_moment_intensity">Moment Intensity</string>
+    <string name="create_trip_intensity_description">How often should we prompt\nfor memories?</string>
+    <string name="create_trip_intensity_chill">CHILL</string>
+    <string name="create_trip_intensity_balanced">BALANCED</string>
+    <string name="create_trip_intensity_intense">INTENSE</string>
+    <string name="create_trip_trip_duration">TRIP DURATION</string>
+    <string name="create_trip_duration_value">3 Days</string>
+    <string name="create_trip_exp_memories">EXP. MEMORIES</string>
+    <string name="create_trip_memories_value">6 Photos</string>
+    <string name="create_trip_notification_note">* We\'ll send you notifications 2 times per day based on your \'Balanced\' pace.</string>
+    <string name="create_trip_invite_explorers">INVITE EXPLORERS</string>
+    <string name="create_trip_view_contacts">VIEW CONTACTS</string>
+    <string name="create_trip_search_placeholder">Search by name or @handle</string>
+    <string name="create_trip_public_trip">Public Trip</string>
+    <string name="create_trip_public_trip_description">Allow the explorer community\nto follow your trip</string>
+    <string name="content_desc_close">Close</string>
+    <string name="content_desc_calendar">Calendar</string>
+    <string name="content_desc_camera">Camera</string>
+    <string name="content_desc_search">Search</string>
+    <string name="content_desc_public">Public trip</string>
 </resources>

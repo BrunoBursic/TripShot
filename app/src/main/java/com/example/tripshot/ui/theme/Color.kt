@@ -2,7 +2,6 @@ package com.example.tripshot.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ─── TripShot App Colors ──────────────────────────────────────────────────────────
 val TripShotPrimary = Color(0xFFA4D8FF)
 val TripShotOnPrimary = Color(0xFF002033)
 
