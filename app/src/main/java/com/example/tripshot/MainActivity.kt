@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -31,7 +32,7 @@ import com.example.tripshot.screens.ExploreScreen
 import com.example.tripshot.screens.HomeScreen
 import com.example.tripshot.screens.ProfileScreen
 import com.example.tripshot.ui.theme.TripShotTheme
-import com.example.tripshot.ui.theme.*
+import com.example.tripshot.ui.theme.TripShotNavIndicator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,7 +69,10 @@ fun BottomNavigationBar(navController: NavHostController) {
         BottomNavItem("crate", "Crate", Icons.Filled.Add),
         BottomNavItem("profile", "Profile", Icons.Filled.Person)
     )
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
         items.forEach { item ->
@@ -82,6 +86,10 @@ fun BottomNavigationBar(navController: NavHostController) {
                 },
                 selected = currentRoute == item.route,
                 colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     indicatorColor = TripShotNavIndicator
                 ),
                 onClick = {

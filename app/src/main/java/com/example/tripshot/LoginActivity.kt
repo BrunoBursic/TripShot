@@ -49,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -60,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tripshot.ui.theme.TripShotBgColor
 import com.example.tripshot.ui.theme.TripShotHint
+import com.example.tripshot.ui.theme.TripShotOnPrimary
+import com.example.tripshot.ui.theme.TripShotOnSurface
 import com.example.tripshot.ui.theme.TripShotPrimary
 import com.example.tripshot.ui.theme.TripShotSurfaceColor
 import com.example.tripshot.ui.theme.TripShotTabBgColor
@@ -199,7 +200,7 @@ fun AnimatedTabBar(
                             shape = RoundedCornerShape(100.dp),
                             colors = ButtonDefaults.textButtonColors(
                                 contentColor = if (isSelected) {
-                                    Color.White
+                                    TripShotOnPrimary
                                 } else {
                                     TripShotTextSecondary
                                 }
@@ -225,7 +226,7 @@ fun authFieldColors() = OutlinedTextFieldDefaults.colors(
     disabledContainerColor = TripShotSurfaceColor,
     focusedBorderColor = TripShotPrimary,
     unfocusedBorderColor = TripShotSurfaceColor,
-    cursorColor = Color.White,
+    cursorColor = TripShotOnSurface,
     focusedTextColor = TripShotTextPrimary,
     unfocusedTextColor = TripShotTextPrimary,
     focusedPlaceholderColor = TripShotHint,
@@ -349,7 +350,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             shape = RoundedCornerShape(100.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = TripShotPrimary,
-                contentColor = Color.White
+                contentColor = TripShotOnPrimary
             )
         ) {
             Text(stringResource(R.string.login_button), fontWeight = FontWeight.Bold)
@@ -559,7 +560,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             shape = RoundedCornerShape(100.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = TripShotPrimary,
-                contentColor = Color.White
+                contentColor = TripShotOnPrimary
             )
         ) {
             Text(stringResource(R.string.signup_button), fontWeight = FontWeight.Bold)
