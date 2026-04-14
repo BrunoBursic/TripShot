@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,7 +47,7 @@ fun ProfileScreen() {
             }
             item {
                 Text(
-                    text = "\"Searching for the world's best espresso and quietest mountain peaks. Currently mapping the hidden trails of Northern Italy.\"",
+                    text = stringResource( R.string.profile_bio),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -56,22 +57,22 @@ fun ProfileScreen() {
             }
             item {
                 FeaturedJourneyCard(
-                    title = "Wild Yosemite",
-                    date = "Oct 2023",
+                    title = stringResource( R.string.profile_trip_yosemite_title),
+                    date = stringResource( R.string.profile_trip_yosemite_date),
                     imageRes = R.drawable.yosemite
                 )
             }
             item {
                 FeaturedJourneyCard(
-                    title = "Venetian Canals",
-                    date = "Aug 2023",
+                    title = stringResource( R.string.profile_trip_venice_title),
+                    date = stringResource( R.string.profile_trip_venice_date),
                     imageRes = R.drawable.venice
                 )
             }
             item {
                 FeaturedJourneyCard(
-                    title = "Kyoto Autumn",
-                    date = "Nov 2022",
+                    title = stringResource( R.string.profile_trip_kyoto_title),
+                    date = stringResource( R.string.profile_trip_kyoto_date),
                     imageRes = R.drawable.kyto
                 )
             }
@@ -88,26 +89,26 @@ private fun ProfileHeader() {
     ) {
         Image(
             painter = painterResource(R.drawable.profile),
-            contentDescription = "Profile photo",
+            contentDescription = stringResource( R.string.profile_cd_avatar),
             modifier = Modifier
                 .size(112.dp)
                 .clip(CircleShape),
             contentScale = ContentScale.Crop
         )
         Text(
-            text = "Alex Explorer",
+            text = stringResource( R.string.profile_name),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "128 Trips",
+            text = stringResource( R.string.profile_stat),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = {}) {
-                Text(text = "Edit Profile")
+                Text(text = stringResource( R.string.profile_edit))
             }
         }
     }
@@ -119,8 +120,8 @@ private fun ProfileStats() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        StatItem("12.4k", "Followers")
-        StatItem("842", "Following")
+        StatItem(stringResource( R.string.profile_stat_followers_value), stringResource( R.string.profile_stat_followers_label))
+        StatItem(stringResource( R.string.profile_stat_following_value), stringResource( R.string.profile_stat_following_label))
     }
 }
 
@@ -154,7 +155,7 @@ private fun FeaturedJourneyCard(
         Column {
             Image(
                 painter = painterResource(imageRes),
-                contentDescription = "Yosemite trip image",
+                contentDescription = stringResource( R.string.profile_cd_trip),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp),
