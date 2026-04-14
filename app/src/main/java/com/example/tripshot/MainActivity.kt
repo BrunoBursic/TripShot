@@ -70,7 +70,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         BottomNavItem("profile", "Profile", Icons.Filled.Person)
     )
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
