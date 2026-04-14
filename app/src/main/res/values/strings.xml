@@ -55,4 +55,38 @@
     <string name="screen_explore">Explore</string>
     <string name="screen_create">Create</string>
     <string name="screen_profile">Profile</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_name">Alex Explorer</string>
+    <string name="profile_subtitle">Pro Traveler - 128 Trips</string>
+    <string name="profile_edit">Edit Profile</string>
+    <string name="profile_share">Share</string>
+    <string name="profile_bio">\"Searching for the world\'s best espresso and quietest mountain peaks. Currently mapping the hidden trails of Northern Italy.\"</string>
+
+    <string name="profile_stat_followers_value">12.4k</string>
+    <string name="profile_stat_followers_label">Followers</string>
+    <string name="profile_stat_following_value">842</string>
+    <string name="profile_stat_following_label">Following</string>
+    <string name="profile_stat_guides_value">45</string>
+    <string name="profile_stat_guides_label">Guides</string>
+
+    <string name="profile_tab_past_trips">Past Trips</string>
+    <string name="profile_tab_my_circle">My Circle</string>
+
+    <string name="profile_featured">Featured Journey</string>
+    <string name="profile_trip_yosemite_title">Wild Yosemite</string>
+    <string name="profile_trip_yosemite_date">Oct 2023 12 Days</string>
+    <string name="profile_trip_venice_title">Venetian Canals</string>
+    <string name="profile_trip_venice_date">Aug 2023</string>
+    <string name="profile_trip_kyoto_title">Kyoto Autumn</string>
+    <string name="profile_trip_kyoto_date">Nov 2022</string>
+
+    <string name="profile_travel_summary">Travel Summary</string>
+    <string name="profile_travel_summary_desc">You have explored 15% of the world. Keep going!</string>
+    <string name="profile_more_travelers">+12</string>
+
+    <string name="profile_cd_avatar">Profile photo</string>
+    <string name="profile_cd_yosemite">Yosemite trip image</string>
+    <string name="profile_cd_trip">Trip image</string>
+    <string name="profile_cd_traveler">Traveler avatar</string>
 </resources>
