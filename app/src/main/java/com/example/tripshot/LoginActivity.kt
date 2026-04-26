@@ -68,10 +68,8 @@ import com.example.tripshot.ui.theme.TripShotTextPrimary
 import com.example.tripshot.ui.theme.TripShotTextSecondary
 import com.example.tripshot.ui.theme.TripShotTheme
 
-// ─── Screen enum ──────────────────────────────────────────────────────────────
 enum class AuthScreen { LOGIN, SIGNUP }
 
-// ─── Activity ─────────────────────────────────────────────────────────────────
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,7 +94,6 @@ class LoginActivity : ComponentActivity() {
     }
 }
 
-// ─── Root that owns the current-screen state ──────────────────────────────────
 @Composable
 fun AuthRoot(modifier: Modifier = Modifier, onAuthSuccess: () -> Unit = {}) {
     var currentScreen by rememberSaveable { mutableStateOf(AuthScreen.LOGIN) }
@@ -154,7 +151,6 @@ fun AuthRoot(modifier: Modifier = Modifier, onAuthSuccess: () -> Unit = {}) {
     }
 }
 
-// ─── Animated pill tab bar ────────────────────────────────────────────────────
 @Composable
 fun AnimatedTabBar(
     currentScreen: AuthScreen,
@@ -218,7 +214,6 @@ fun AnimatedTabBar(
     }
 }
 
-// ─── Shared text field colours helper ─────────────────────────────────────────
 @Composable
 fun authFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = TripShotSurfaceColor,
@@ -235,7 +230,6 @@ fun authFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedLabelColor = TripShotHint
 )
 
-// ─── Login screen ─────────────────────────────────────────────────────────────
 @Composable
 fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     var email by rememberSaveable { mutableStateOf("") }
@@ -382,7 +376,6 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     }
 }
 
-// ─── Sign up screen ───────────────────────────────────────────────────────────
 @Composable
 fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     var name by rememberSaveable { mutableStateOf("") }
@@ -592,7 +585,6 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     }
 }
 
-// ─── Preview ──────────────────────────────────────────────────────────────────
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun AuthRootPreview() {
