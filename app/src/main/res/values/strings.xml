@@ -98,13 +98,14 @@
     <string name="create_trip_memories_value">6 Photos</string>
     <string name="create_trip_notification_note">* We\'ll send you notifications 2 times per day based on your \'Balanced\' pace.</string>
     <string name="create_trip_invite_explorers">INVITE EXPLORERS</string>
-    <string name="create_trip_view_contacts">VIEW CONTACTS</string>
     <string name="create_trip_search_placeholder">Search by name or @handle</string>
     <string name="create_trip_public_trip">Public Trip</string>
     <string name="create_trip_public_trip_description">Allow the explorer community\nto follow your trip</string>
     <string name="content_desc_close">Close</string>
     <string name="content_desc_calendar">Calendar</string>
     <string name="content_desc_camera">Camera</string>
+    <string name="content_desc_trip_cover">Trip cover</string>
     <string name="content_desc_search">Search</string>
+    <string name="content_desc_add">Add invitee</string>
     <string name="content_desc_public">Public trip</string>
 </resources>

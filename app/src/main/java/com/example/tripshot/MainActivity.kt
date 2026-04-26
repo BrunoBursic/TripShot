@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -52,7 +53,19 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable("home") { HomeScreen() }
                         composable("explore") { ExploreScreen() }
-                        composable("crate") { CreateScreen() }
+                        composable("crate") {
+                            CreateScreen(
+                                onSaveClick = {
+                                    navController.navigate("home") {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
                         composable("profile") { ProfileScreen() }
                     }
                 }
@@ -94,7 +107,9 @@ fun BottomNavigationBar(navController: NavHostController) {
                 ),
                 onClick = {
                     navController.navigate(item.route) {
-                        popUpTo("home") { saveState = true }
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
                         launchSingleTop = true
                         restoreState = true
                     }

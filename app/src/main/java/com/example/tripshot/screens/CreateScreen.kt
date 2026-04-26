@@ -1,5 +1,8 @@
 package com.example.tripshot.screens
 
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +26,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -36,9 +41,11 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -47,23 +54,35 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,13 +109,15 @@ data class InviteeUi(
     val avatar: Painter? = null
 )
 
+private const val ONE_MINUTE_MILLIS = 60_000L
+
 @Composable
 fun CreateScreen(
     modifier: Modifier = Modifier,
-    onSaveClick: () -> Unit = {},
-    coverPainter: Painter? = null
+    onSaveClick: () -> Unit = {}
 ) {
     var tripName by rememberSaveable { mutableStateOf("") }
+    var selectedCoverUri by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Initialize with default dates (today and 3 days from now)
     val calendar = Calendar.getInstance()
@@ -104,20 +125,24 @@ fun CreateScreen(
     calendar.add(Calendar.DAY_OF_MONTH, 3)
     val defaultEndTime = calendar.timeInMillis
 
-    var startDateTimeMillis by rememberSaveable { mutableStateOf(defaultStartTime) }
-    var endDateTimeMillis by rememberSaveable { mutableStateOf(defaultEndTime) }
+    var startDateTimeMillis by rememberSaveable { mutableLongStateOf(defaultStartTime) }
+    var endDateTimeMillis by rememberSaveable { mutableLongStateOf(defaultEndTime) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedIntensity by rememberSaveable {
         mutableStateOf(IntensityOption.BALANCED)
     }
     var isPublicTrip by rememberSaveable { mutableStateOf(true) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> selectedCoverUri = uri?.toString() }
+    )
 
-    val invitees = remember {
-        listOf(
-            InviteeUi("Alex M."),
-            InviteeUi("Sarah J.")
+    val invitees = rememberSaveable(
+        saver = listSaver(
+            save = { inviteeList -> inviteeList.map(InviteeUi::name) },
+            restore = { names -> names.mapTo(mutableStateListOf()) { InviteeUi(it) } }
         )
-    }
+    ) { mutableStateListOf<InviteeUi>() }
 
     Column(
         modifier = modifier
@@ -134,8 +159,12 @@ fun CreateScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             CoverSection(
-                coverPainter = coverPainter,
-                onChangeCoverClick = {}
+                coverUri = selectedCoverUri?.let(Uri::parse),
+                onChangeCoverClick = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                }
             )
 
             TripNameSection(
@@ -146,8 +175,15 @@ fun CreateScreen(
             DateRangeSection(
                 startDateTimeMillis = startDateTimeMillis,
                 endDateTimeMillis = endDateTimeMillis,
-                onStartDateTimeChange = { startDateTimeMillis = it },
-                onEndDateTimeChange = { endDateTimeMillis = it }
+                onStartDateTimeChange = { updatedStart ->
+                    startDateTimeMillis = updatedStart
+                    if (endDateTimeMillis <= updatedStart) {
+                        endDateTimeMillis = updatedStart + ONE_MINUTE_MILLIS
+                    }
+                },
+                onEndDateTimeChange = { updatedEnd ->
+                    endDateTimeMillis = maxOf(updatedEnd, startDateTimeMillis + ONE_MINUTE_MILLIS)
+                }
             )
 
             MomentIntensitySection(
@@ -159,8 +195,14 @@ fun CreateScreen(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
                 invitees = invitees,
-                onViewContactsClick = {},
-                onRemoveInvitee = {}
+                onAddInviteeFromSearch = {
+                    val newName = searchQuery.trim()
+                    if (newName.isNotEmpty() && invitees.none { it.name.equals(newName, ignoreCase = true) }) {
+                        invitees.add(InviteeUi(newName))
+                        searchQuery = ""
+                    }
+                },
+                onRemoveInvitee = { invitees.remove(it) }
             )
 
             PublicTripSection(
@@ -193,9 +235,11 @@ fun CreateScreen(
 
 @Composable
 fun CoverSection(
-    coverPainter: Painter?,
+    coverUri: Uri?,
     onChangeCoverClick: () -> Unit
 ) {
+    val coverImageBitmap = rememberImageBitmapFromUri(coverUri)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -203,12 +247,21 @@ fun CoverSection(
             .clip(RoundedCornerShape(28.dp))
             .background(Color(0xFF2F4F4F))
     ) {
-        Image(
-            painter = coverPainter ?: ColorPainter(Color(0xFF2F4F4F)),
-            contentDescription = "Trip cover",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        if (coverImageBitmap != null) {
+            Image(
+                bitmap = coverImageBitmap,
+                contentDescription = stringResource(R.string.content_desc_trip_cover),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Image(
+                painter = ColorPainter(Color(0xFF2F4F4F)),
+                contentDescription = stringResource(R.string.content_desc_trip_cover),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -257,6 +310,26 @@ fun CoverSection(
 }
 
 @Composable
+private fun rememberImageBitmapFromUri(uri: Uri?): ImageBitmap? {
+    val context = LocalContext.current
+    val contentResolver = context.contentResolver
+
+    val imageBitmapState by produceState<ImageBitmap?>(initialValue = null, uri) {
+        value = uri?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val source = android.graphics.ImageDecoder.createSource(contentResolver, it)
+                android.graphics.ImageDecoder.decodeBitmap(source).asImageBitmap()
+            } else {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Media.getBitmap(contentResolver, it).asImageBitmap()
+            }
+        }
+    }
+
+    return imageBitmapState
+}
+
+@Composable
 fun TripNameSection(
     value: String,
     onValueChange: (String) -> Unit
@@ -294,9 +367,20 @@ fun DateRangeSection(
             label = stringResource(R.string.create_trip_end_date),
             dateTimeMillis = endDateTimeMillis,
             onDateTimeChange = onEndDateTimeChange,
+            minDateTimeMillis = startDateTimeMillis + ONE_MINUTE_MILLIS,
             modifier = Modifier.weight(1f)
         )
     }
+}
+
+private fun startOfDayMillis(dateTimeMillis: Long): Long {
+    return Calendar.getInstance().apply {
+        timeInMillis = dateTimeMillis
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -305,12 +389,13 @@ fun DateTimeField(
     label: String,
     dateTimeMillis: Long,
     onDateTimeChange: (Long) -> Unit,
+    minDateTimeMillis: Long? = null,
     modifier: Modifier = Modifier
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
-    val dateTimeFormatter = remember { SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault()) }
+    val dateTimeFormatter = remember { SimpleDateFormat("dd/MM/yy HH:mm", Locale.getDefault()) }
 
     val displayText = remember(dateTimeMillis) {
         dateTimeFormatter.format(dateTimeMillis)
@@ -354,8 +439,19 @@ fun DateTimeField(
 
     // Date Picker Dialog
     if (showDatePicker) {
+        val minSelectableDateMillis = remember(minDateTimeMillis) {
+            minDateTimeMillis?.let(::startOfDayMillis)
+        }
+        val selectableDates = remember(minSelectableDateMillis) {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    return minSelectableDateMillis?.let { utcTimeMillis >= it } ?: true
+                }
+            }
+        }
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = dateTimeMillis
+            initialSelectedDateMillis = dateTimeMillis,
+            selectableDates = selectableDates
         )
 
         DatePickerDialog(
@@ -375,7 +471,12 @@ fun DateTimeField(
                             newCalendar.set(Calendar.HOUR_OF_DAY, oldHour)
                             newCalendar.set(Calendar.MINUTE, oldMinute)
 
-                            onDateTimeChange(newCalendar.timeInMillis)
+                            val updatedMillis = if (minDateTimeMillis != null) {
+                                maxOf(newCalendar.timeInMillis, minDateTimeMillis)
+                            } else {
+                                newCalendar.timeInMillis
+                            }
+                            onDateTimeChange(updatedMillis)
                         }
                         showDatePicker = false
                         // Show time picker after date selection
@@ -397,12 +498,65 @@ fun DateTimeField(
 
     // Time Picker Dialog
     if (showTimePicker) {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = dateTimeMillis
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = dateTimeMillis
+        }
+        val selectedDateStart = startOfDayMillis(dateTimeMillis)
+        val minCalendar = minDateTimeMillis?.let {
+            Calendar.getInstance().apply { timeInMillis = it }
+        }
+        val minTimeAppliesToSelectedDate = minDateTimeMillis != null &&
+            selectedDateStart == startOfDayMillis(minDateTimeMillis)
+        val minHour = if (minTimeAppliesToSelectedDate) {
+            minCalendar?.get(Calendar.HOUR_OF_DAY) ?: 0
+        } else {
+            0
+        }
+        val minMinute = if (minTimeAppliesToSelectedDate) {
+            minCalendar?.get(Calendar.MINUTE) ?: 0
+        } else {
+            0
+        }
+        val initialHour = calendar.get(Calendar.HOUR_OF_DAY)
+        val initialMinute = calendar.get(Calendar.MINUTE)
+        val clampedInitialHour = if (minTimeAppliesToSelectedDate && initialHour < minHour) {
+            minHour
+        } else {
+            initialHour
+        }
+        val clampedInitialMinute = if (
+            minTimeAppliesToSelectedDate &&
+            clampedInitialHour == minHour &&
+            initialMinute < minMinute
+        ) {
+            minMinute
+        } else {
+            initialMinute
+        }
         val timePickerState = rememberTimePickerState(
-            initialHour = calendar.get(Calendar.HOUR_OF_DAY),
-            initialMinute = calendar.get(Calendar.MINUTE)
+            initialHour = clampedInitialHour,
+            initialMinute = clampedInitialMinute,
+            is24Hour = true
         )
+        LaunchedEffect(
+            timePickerState.hour,
+            timePickerState.minute,
+            minTimeAppliesToSelectedDate,
+            minHour,
+            minMinute
+        ) {
+            if (!minTimeAppliesToSelectedDate) return@LaunchedEffect
+
+            when {
+                timePickerState.hour < minHour -> {
+                    timePickerState.hour = minHour
+                    timePickerState.minute = minMinute
+                }
+                timePickerState.hour == minHour && timePickerState.minute < minMinute -> {
+                    timePickerState.minute = minMinute
+                }
+            }
+        }
 
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showTimePicker = false },
@@ -413,7 +567,12 @@ fun DateTimeField(
                         updatedCalendar.timeInMillis = dateTimeMillis
                         updatedCalendar.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
                         updatedCalendar.set(Calendar.MINUTE, timePickerState.minute)
-                        onDateTimeChange(updatedCalendar.timeInMillis)
+                        val updatedMillis = if (minDateTimeMillis != null) {
+                            maxOf(updatedCalendar.timeInMillis, minDateTimeMillis)
+                        } else {
+                            updatedCalendar.timeInMillis
+                        }
+                        onDateTimeChange(updatedMillis)
                         showTimePicker = false
                     }
                 ) {
@@ -644,32 +803,16 @@ fun InviteExplorersSection(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     invitees: List<InviteeUi>,
-    onViewContactsClick: () -> Unit,
+    onAddInviteeFromSearch: () -> Unit,
     onRemoveInvitee: (InviteeUi) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SectionLabel(stringResource(R.string.create_trip_invite_explorers))
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            TextButton(onClick = onViewContactsClick) {
-                Text(
-                    text = stringResource(R.string.create_trip_view_contacts),
-                    color = TripShotPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp
-                )
-            }
-        }
+        SectionLabel(stringResource(R.string.create_trip_invite_explorers))
 
         SearchField(
             value = searchQuery,
-            onValueChange = onSearchQueryChange
+            onValueChange = onSearchQueryChange,
+            onAddFromSearch = onAddInviteeFromSearch
         )
 
         Row(
@@ -684,8 +827,6 @@ fun InviteExplorersSection(
                     onRemoveClick = { onRemoveInvitee(invitee) }
                 )
             }
-
-            AddInviteeChip(onClick = {})
         }
     }
 }
@@ -693,8 +834,11 @@ fun InviteExplorersSection(
 @Composable
 fun SearchField(
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    onAddFromSearch: () -> Unit
 ) {
+    val canAddInvitee = value.isNotBlank()
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -712,6 +856,22 @@ fun SearchField(
                 tint = TripShotTextSecondary
             )
         },
+        trailingIcon = {
+            IconButton(
+                onClick = onAddFromSearch,
+                enabled = canAddInvitee
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.content_desc_add),
+                    tint = if (canAddInvitee) TripShotPrimary else TripShotTextSecondary
+                )
+            }
+        },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(
+            onDone = { onAddFromSearch() }
+        ),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = Color(0xFF242424),
             unfocusedContainerColor = Color(0xFF242424),
@@ -774,30 +934,6 @@ fun InviteeChip(
                     fontWeight = FontWeight.Bold
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun AddInviteeChip(
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        border = BorderStroke(2.dp, Color(0xFF404040)),
-        color = Color.Transparent,
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "+",
-                color = Color(0xFF404040),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
