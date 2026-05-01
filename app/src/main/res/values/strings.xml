@@ -16,6 +16,12 @@
     <string name="label_password">PASSWORD</string>
     <string name="label_confirm_password">CONFIRM PASSWORD</string>
 
+    <!-- Validation Errors -->
+    <string name="error_email_required">Email address is required</string>
+    <string name="error_password_required">Password is required</string>
+    <string name="error_name_required">Full name is required</string>
+    <string name="error_passwords_dont_match">Passwords do not match</string>
+
     <!-- Placeholders -->
     <string name="placeholder_name">Alex Explorer</string>
     <string name="placeholder_email">alex@explorer.com</string>

@@ -2,6 +2,7 @@ package com.example.tripshot
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +36,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -44,11 +47,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -67,12 +74,23 @@ import com.example.tripshot.ui.theme.TripShotTabBgColor
 import com.example.tripshot.ui.theme.TripShotTextPrimary
 import com.example.tripshot.ui.theme.TripShotTextSecondary
 import com.example.tripshot.ui.theme.TripShotTheme
+import com.example.tripshot.model.User
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.userProfileChangeRequest
+import com.google.firebase.firestore.FirebaseFirestore
 
 enum class AuthScreen { LOGIN, SIGNUP }
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Auto-login check: if user is already signed in, skip login screen
+        if (FirebaseAuth.getInstance().currentUser != null) {
+            navigateToMainActivity()
+            return
+        }
+
         enableEdgeToEdge()
         setContent {
             TripShotTheme {
@@ -219,15 +237,21 @@ fun authFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = TripShotSurfaceColor,
     unfocusedContainerColor = TripShotSurfaceColor,
     disabledContainerColor = TripShotSurfaceColor,
+    errorContainerColor = TripShotSurfaceColor,
     focusedBorderColor = TripShotPrimary,
-    unfocusedBorderColor = TripShotSurfaceColor,
+    unfocusedBorderColor = Color.Transparent,
+    errorBorderColor = Color.Transparent,
     cursorColor = TripShotOnSurface,
     focusedTextColor = TripShotTextPrimary,
     unfocusedTextColor = TripShotTextPrimary,
     focusedPlaceholderColor = TripShotHint,
     unfocusedPlaceholderColor = TripShotHint,
     focusedLabelColor = TripShotTextSecondary,
-    unfocusedLabelColor = TripShotHint
+    unfocusedLabelColor = TripShotHint,
+    errorLeadingIconColor = MaterialTheme.colorScheme.error,
+    errorTrailingIconColor = TripShotHint,
+    errorLabelColor = MaterialTheme.colorScheme.error,
+    errorSupportingTextColor = MaterialTheme.colorScheme.error
 )
 
 @Composable
@@ -235,6 +259,13 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var showErrors by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+
+    val emailError = showErrors && email.isBlank()
+    val passwordError = showErrors && password.isBlank()
 
     Column(
         modifier = Modifier
@@ -260,7 +291,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
 
         Text(
             text = stringResource(R.string.label_email),
-            color = TripShotTextSecondary,
+            color = if (emailError) MaterialTheme.colorScheme.error else TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
@@ -270,21 +301,33 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(100.dp), clip = false),
             placeholder = { Text(stringResource(R.string.placeholder_email), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Email,
                     contentDescription = stringResource(R.string.content_desc_email),
-                    tint = TripShotHint
+                    tint = if (emailError) MaterialTheme.colorScheme.error else TripShotHint
                 )
             },
             shape = RoundedCornerShape(100.dp),
-            colors = authFieldColors()
+            colors = authFieldColors(),
+            enabled = !isLoading,
+            isError = emailError,
+            supportingText = if (emailError) {
+                {
+                    Text(
+                        text = stringResource(R.string.error_email_required),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else null
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(if (emailError) 8.dp else 20.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -293,7 +336,7 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         ) {
             Text(
                 text = stringResource(R.string.label_password),
-                color = TripShotTextSecondary,
+                color = if (passwordError) MaterialTheme.colorScheme.error else TripShotTextSecondary,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -307,14 +350,16 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(100.dp), clip = false),
             placeholder = { Text(stringResource(R.string.placeholder_password), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = stringResource(R.string.content_desc_password),
-                    tint = TripShotHint
+                    tint = if (passwordError) MaterialTheme.colorScheme.error else TripShotHint
                 )
             },
             trailingIcon = {
@@ -331,13 +376,43 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
                 PasswordVisualTransformation()
             },
             shape = RoundedCornerShape(100.dp),
-            colors = authFieldColors()
+            colors = authFieldColors(),
+            enabled = !isLoading,
+            isError = passwordError,
+            supportingText = if (passwordError) {
+                {
+                    Text(
+                        text = stringResource(R.string.error_password_required),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else null
         )
 
         Spacer(modifier = Modifier.height(28.dp))
 
         Button(
-            onClick = onAuthSuccess,
+            onClick = {
+                showErrors = true
+                if (email.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                isLoading = true
+                auth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener { task ->
+                        isLoading = false
+                        if (task.isSuccessful) {
+                            onAuthSuccess()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Login failed: ${task.exception?.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -345,9 +420,18 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             colors = ButtonDefaults.buttonColors(
                 containerColor = TripShotPrimary,
                 contentColor = TripShotOnPrimary
-            )
+            ),
+            enabled = !isLoading
         ) {
-            Text(stringResource(R.string.login_button), fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = TripShotOnPrimary,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(stringResource(R.string.login_button), fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -363,7 +447,8 @@ fun LoginContent(onGoToSignup: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             )
             TextButton(
                 onClick = onGoToSignup,
-                contentPadding = PaddingValues(0.dp)
+                contentPadding = PaddingValues(0.dp),
+                enabled = !isLoading
             ) {
                 Text(
                     text = stringResource(R.string.signup_link),
@@ -384,6 +469,15 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var confirmVisible by rememberSaveable { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var showErrors by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+
+    val nameError = showErrors && name.isBlank()
+    val emailError = showErrors && email.isBlank()
+    val passwordError = showErrors && password.isBlank()
+    val confirmError = showErrors && (confirmPassword.isBlank() || confirmPassword != password)
 
     Column(
         modifier = Modifier
@@ -409,7 +503,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
 
         Text(
             text = stringResource(R.string.label_full_name),
-            color = TripShotTextSecondary,
+            color = if (nameError) MaterialTheme.colorScheme.error else TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
@@ -419,25 +513,37 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(100.dp), clip = false),
             placeholder = { Text(stringResource(R.string.placeholder_name), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = stringResource(R.string.content_desc_name),
-                    tint = TripShotHint
+                    tint = if (nameError) MaterialTheme.colorScheme.error else TripShotHint
                 )
             },
             shape = RoundedCornerShape(100.dp),
-            colors = authFieldColors()
+            colors = authFieldColors(),
+            enabled = !isLoading,
+            isError = nameError,
+            supportingText = if (nameError) {
+                {
+                    Text(
+                        text = stringResource(R.string.error_name_required),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else null
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(if (nameError) 8.dp else 20.dp))
 
         Text(
             text = stringResource(R.string.label_email),
-            color = TripShotTextSecondary,
+            color = if (emailError) MaterialTheme.colorScheme.error else TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
@@ -447,25 +553,37 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(100.dp), clip = false),
             placeholder = { Text(stringResource(R.string.placeholder_email), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Email,
                     contentDescription = stringResource(R.string.content_desc_email),
-                    tint = TripShotHint
+                    tint = if (emailError) MaterialTheme.colorScheme.error else TripShotHint
                 )
             },
             shape = RoundedCornerShape(100.dp),
-            colors = authFieldColors()
+            colors = authFieldColors(),
+            enabled = !isLoading,
+            isError = emailError,
+            supportingText = if (emailError) {
+                {
+                    Text(
+                        text = stringResource(R.string.error_email_required),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else null
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(if (emailError) 8.dp else 20.dp))
 
         Text(
             text = stringResource(R.string.label_password),
-            color = TripShotTextSecondary,
+            color = if (passwordError) MaterialTheme.colorScheme.error else TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
@@ -475,14 +593,16 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(100.dp), clip = false),
             placeholder = { Text(stringResource(R.string.placeholder_password), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = stringResource(R.string.content_desc_password),
-                    tint = TripShotHint
+                    tint = if (passwordError) MaterialTheme.colorScheme.error else TripShotHint
                 )
             },
             trailingIcon = {
@@ -499,14 +619,24 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
                 PasswordVisualTransformation()
             },
             shape = RoundedCornerShape(100.dp),
-            colors = authFieldColors()
+            colors = authFieldColors(),
+            enabled = !isLoading,
+            isError = passwordError,
+            supportingText = if (passwordError) {
+                {
+                    Text(
+                        text = stringResource(R.string.error_password_required),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else null
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(if (passwordError) 8.dp else 20.dp))
 
         Text(
             text = stringResource(R.string.label_confirm_password),
-            color = TripShotTextSecondary,
+            color = if (confirmError) MaterialTheme.colorScheme.error else TripShotTextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
@@ -516,14 +646,16 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(100.dp), clip = false),
             placeholder = { Text(stringResource(R.string.placeholder_password), color = TripShotHint) },
             singleLine = true,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = stringResource(R.string.content_desc_confirm_password),
-                    tint = TripShotHint
+                    tint = if (confirmError) MaterialTheme.colorScheme.error else TripShotHint
                 )
             },
             trailingIcon = {
@@ -540,13 +672,79 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
                 PasswordVisualTransformation()
             },
             shape = RoundedCornerShape(100.dp),
-            colors = authFieldColors()
+            colors = authFieldColors(),
+            enabled = !isLoading,
+            isError = confirmError,
+            supportingText = if (confirmError) {
+                {
+                    Text(
+                        text = if (confirmPassword.isBlank()) stringResource(R.string.error_password_required) else stringResource(R.string.error_passwords_dont_match),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else null
         )
 
         Spacer(modifier = Modifier.height(28.dp))
 
         Button(
-            onClick = onAuthSuccess,
+            onClick = {
+                showErrors = true
+                if (email.isBlank() || password.isBlank() || name.isBlank() || confirmPassword.isBlank()) {
+                    Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                if (password != confirmPassword) {
+                    Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                isLoading = true
+                auth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val user = auth.currentUser
+                            if (user != null) {
+                                val profileUpdates = userProfileChangeRequest {
+                                    displayName = name
+                                }
+                                user.updateProfile(profileUpdates)
+                                    .addOnCompleteListener { _ ->
+
+                                        val db = FirebaseFirestore.getInstance()
+                                        val userObj = User(
+                                            uid = user.uid,
+                                            name = name,
+                                            email = email
+                                        )
+
+                                        db.collection("users").document(user.uid)
+                                            .set(userObj)
+                                            .addOnCompleteListener { _ ->
+                                                isLoading = false
+                                                onAuthSuccess()
+                                            }
+                                            .addOnFailureListener { e ->
+                                                isLoading = false
+                                                Toast.makeText(context, "Firestore error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                // Still proceed to main activity as auth was successful
+                                                onAuthSuccess()
+                                            }
+                                    }
+                            }
+                            else {
+                                isLoading = false
+                                onAuthSuccess()
+                            }
+                        } else {
+                            isLoading = false
+                            Toast.makeText(
+                                context,
+                                "Signup failed: ${task.exception?.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -554,9 +752,18 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             colors = ButtonDefaults.buttonColors(
                 containerColor = TripShotPrimary,
                 contentColor = TripShotOnPrimary
-            )
+            ),
+            enabled = !isLoading
         ) {
-            Text(stringResource(R.string.signup_button), fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = TripShotOnPrimary,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(stringResource(R.string.signup_button), fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -573,6 +780,7 @@ fun SignupContent(onGoToLogin: () -> Unit, onAuthSuccess: () -> Unit = {}) {
             TextButton(
                 onClick = onGoToLogin,
                 contentPadding = PaddingValues(0.dp),
+                enabled = !isLoading
             ) {
                 Text(
                     text = stringResource(R.string.login_link),

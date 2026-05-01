@@ -1,5 +1,6 @@
 package com.example.tripshot.screens
 
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -24,11 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.tripshot.LoginActivity
 import com.example.tripshot.R
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun ProfileScreen() {
@@ -81,6 +87,7 @@ fun ProfileScreen() {
 
 @Composable
 private fun ProfileHeader() {
+    val context = LocalContext.current
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -108,6 +115,21 @@ private fun ProfileHeader() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = {}) {
                 Text(text = stringResource( R.string.profile_edit))
+            }
+            Button(
+                onClick = {
+                    FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(context, LoginActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
+                    context.startActivity(intent)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text(text = "Logout")
             }
         }
     }
