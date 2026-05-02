@@ -55,12 +55,15 @@
     <string name="nav_create_label">Create</string>
     <string name="nav_profile">profile</string>
     <string name="nav_profile_label">Profile</string>
+    <string name="nav_notif_label">Notifications</string>
+    <string name='nav_notif'>notifications</string>
 
     <!-- Screen Titles -->
     <string name="screen_home">Home</string>
     <string name="screen_explore">Explore</string>
     <string name="screen_create">Create</string>
     <string name="screen_profile">Profile</string>
+    <string name="notificiation_profile">Notifications</string>
 
     <!-- Profile Screen -->
     <string name="profile_name">Alex Explorer</string>
@@ -102,7 +105,7 @@
     <string name="create_trip_duration_value">3 Days</string>
     <string name="create_trip_exp_memories">EXP. MEMORIES</string>
     <string name="create_trip_memories_value">6 Photos</string>
-    <string name="create_trip_notification_note">* We\'ll send you notifications 2 times per day based on your \'Balanced\' pace.</string>
+    <string name="create_trip_notification_note_formatted">* We\'ll send you notifications %1$d times per day based on your \'%2$s\' pace.</string>
     <string name="create_trip_invite_explorers">INVITE EXPLORERS</string>
     <string name="create_trip_search_placeholder">Search by name or @handle</string>
     <string name="create_trip_public_trip">Public Trip</string>

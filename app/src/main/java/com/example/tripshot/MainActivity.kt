@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -31,6 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.tripshot.screens.CreateScreen
 import com.example.tripshot.screens.ExploreScreen
 import com.example.tripshot.screens.HomeScreen
+import com.example.tripshot.screens.NotifciationScreen
 import com.example.tripshot.screens.ProfileScreen
 import com.example.tripshot.ui.theme.TripShotTheme
 import com.example.tripshot.ui.theme.TripShotNavIndicator
@@ -49,11 +51,11 @@ class MainActivity : ComponentActivity() {
                     NavHost(
                         navController = navController,
                         startDestination = "home",
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
                     ) {
                         composable("home") { HomeScreen() }
                         composable("explore") { ExploreScreen() }
-                        composable("crate") {
+                        composable("create") {
                             CreateScreen(
                                 onSaveClick = {
                                     navController.navigate("home") {
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("notifications") { NotifciationScreen() }
                         composable("profile") { ProfileScreen() }
                     }
                 }
@@ -79,7 +82,8 @@ fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         BottomNavItem("home", "Home", Icons.Filled.Home),
         BottomNavItem("explore", "Explore", Icons.Filled.Search),
-        BottomNavItem("crate", "Crate", Icons.Filled.Add),
+        BottomNavItem("create", "Create", Icons.Filled.Add),
+        BottomNavItem("notifications", "Notifications", Icons.Filled.Notifications),
         BottomNavItem("profile", "Profile", Icons.Filled.Person)
     )
     NavigationBar(
