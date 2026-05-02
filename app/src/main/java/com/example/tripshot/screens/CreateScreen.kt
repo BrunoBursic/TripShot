@@ -127,6 +127,31 @@ fun CreateScreen(
 
     var startDateTimeMillis by rememberSaveable { mutableLongStateOf(defaultStartTime) }
     var endDateTimeMillis by rememberSaveable { mutableLongStateOf(defaultEndTime) }
+
+    // Calculate duration in days
+    val durationInDays = remember(startDateTimeMillis, endDateTimeMillis) {
+        val diff = endDateTimeMillis - startDateTimeMillis
+        (diff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
+    }
+
+    // Calculate photo count based on AGENTS.md rules
+    val photoCount = remember(durationInDays) {
+        when {
+            durationInDays <= 7 -> durationInDays * 2
+            durationInDays <= 14 -> durationInDays + 7
+            else -> durationInDays
+        }
+    }
+
+    // Calculate interval in hours based on AGENTS.md rules
+    val intervalHours = remember(durationInDays) {
+        when {
+            durationInDays <= 7 -> 12
+            durationInDays <= 14 -> 16
+            else -> 24
+        }
+    }
+
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedIntensity by rememberSaveable {
         mutableStateOf(IntensityOption.BALANCED)
@@ -188,7 +213,10 @@ fun CreateScreen(
 
             MomentIntensitySection(
                 selected = selectedIntensity,
-                onSelect = { selectedIntensity = it }
+                onSelect = { selectedIntensity = it },
+                durationInDays = durationInDays,
+                photoCount = photoCount,
+                intervalHours = intervalHours
             )
 
             InviteExplorersSection(
@@ -602,7 +630,10 @@ fun DateTimeField(
 @Composable
 fun MomentIntensitySection(
     selected: IntensityOption,
-    onSelect: (IntensityOption) -> Unit
+    onSelect: (IntensityOption) -> Unit,
+    durationInDays: Int,
+    photoCount: Int,
+    intervalHours: Int
 ) {
     Surface(
         color = TripShotSurfaceColor,
@@ -666,10 +697,17 @@ fun MomentIntensitySection(
                 )
             }
 
-            StatsRow()
+            StatsRow(
+                durationInDays = durationInDays,
+                photoCount = photoCount
+            )
 
             Text(
-                text = stringResource(R.string.create_trip_notification_note),
+                text = stringResource(
+                    R.string.create_trip_notification_note_formatted,
+                    (24 / intervalHours),
+                    selected.name.lowercase().replaceFirstChar { it.uppercase() }
+                ),
                 color = TripShotTextSecondary,
                 fontSize = 12.sp,
                 lineHeight = 20.sp
@@ -739,7 +777,10 @@ fun IntensityCard(
 }
 
 @Composable
-fun StatsRow() {
+fun StatsRow(
+    durationInDays: Int,
+    photoCount: Int
+) {
     Surface(
         color = Color(0xFF242424),
         shape = RoundedCornerShape(16.dp),
@@ -761,7 +802,7 @@ fun StatsRow() {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.create_trip_duration_value),
+                    text = "$durationInDays ${if (durationInDays == 1) "Day" else "Days"}",
                     color = TripShotTextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
@@ -788,7 +829,7 @@ fun StatsRow() {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.create_trip_memories_value),
+                    text = "$photoCount Photos",
                     color = TripShotPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
