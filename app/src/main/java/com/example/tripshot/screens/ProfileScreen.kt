@@ -28,7 +28,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,22 +54,22 @@ fun ProfileScreen() {
     var isLoading by remember { mutableStateOf(true) }
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
+    val currentUserId = auth.currentUser?.uid
 
-    LaunchedEffect(auth.currentUser?.uid) {
-        val uid = auth.currentUser?.uid
-        if (uid != null) {
-            firestore.collection("users").document(uid).get()
-                .addOnSuccessListener { document ->
-                    if (document != null) {
-                        user = document.toObject(User::class.java)
-                    }
-                    isLoading = false
-                }
-                .addOnFailureListener {
-                    isLoading = false
-                }
-        } else {
+    DisposableEffect(currentUserId) {
+        if (currentUserId == null) {
             isLoading = false
+            onDispose { }
+        } else {
+            val registration = firestore.collection("users").document(currentUserId)
+                .addSnapshotListener { document, _ ->
+                    user = document?.toObject(User::class.java)
+                    isLoading = false
+                }
+
+            onDispose {
+                registration.remove()
+            }
         }
     }
 

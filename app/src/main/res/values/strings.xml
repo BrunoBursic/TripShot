@@ -64,6 +64,12 @@
     <string name="screen_create">Create</string>
     <string name="screen_profile">Profile</string>
     <string name="notificiation_profile">Notifications</string>
+    <string name="explore_search_placeholder">Search users by name</string>
+    <string name="explore_search_hint">Type a name to find users</string>
+    <string name="explore_no_users_found">No users found</string>
+    <string name="explore_follow">Follow</string>
+    <string name="explore_following">Following</string>
+    <string name="explore_follow_failed">Failed to follow user</string>
 
     <!-- Profile Screen -->
     <string name="profile_name">Alex Explorer</string>
