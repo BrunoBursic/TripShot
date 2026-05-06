@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.example.tripshot.R
 import com.example.tripshot.model.User
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
@@ -206,6 +207,7 @@ private fun followUser(
     val targetUserRef = firestore.collection("users").document(targetUserId)
     val followingRef = currentUserRef.collection("following").document(targetUserId)
     val followerRef = targetUserRef.collection("followers").document(currentUserId)
+    val notificationRef = targetUserRef.collection("notifications").document()
 
     firestore.runTransaction { transaction ->
         val alreadyFollowing = transaction.get(followingRef).exists()
@@ -215,12 +217,26 @@ private fun followUser(
 
         val currentUserSnapshot = transaction.get(currentUserRef)
         val targetUserSnapshot = transaction.get(targetUserRef)
+        val currentUserName = currentUserSnapshot.getString("name")
+            ?.takeIf { it.isNotBlank() }
+            ?: "Someone"
 
         val newFollowingCount = (currentUserSnapshot.getLong("followingCount") ?: 0L) + 1L
         val newFollowerCount = (targetUserSnapshot.getLong("followerCount") ?: 0L) + 1L
 
         transaction.set(followingRef, mapOf("uid" to targetUserId))
         transaction.set(followerRef, mapOf("uid" to currentUserId))
+        transaction.set(
+            notificationRef,
+            mapOf(
+                "type" to "new_follower",
+                "title" to "You got a new follower",
+                "message" to "$currentUserName started following you",
+                "fromUserId" to currentUserId,
+                "fromUserName" to currentUserName,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+        )
         transaction.update(currentUserRef, "followingCount", newFollowingCount)
         transaction.update(targetUserRef, "followerCount", newFollowerCount)
 

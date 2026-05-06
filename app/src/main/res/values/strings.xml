@@ -64,6 +64,11 @@
     <string name="screen_create">Create</string>
     <string name="screen_profile">Profile</string>
     <string name="notificiation_profile">Notifications</string>
+    <string name="notifications_empty">No notifications yet</string>
+    <string name="notification_new_follower_title">You got a new follower</string>
+    <string name="notification_new_follower_message">%1$s started following you</string>
+    <string name="notification_channel_followers_name">New followers</string>
+    <string name="notification_channel_followers_description">Alerts when someone starts following you</string>
     <string name="explore_search_placeholder">Search users by name</string>
     <string name="explore_search_hint">Type a name to find users</string>
     <string name="explore_no_users_found">No users found</string>
