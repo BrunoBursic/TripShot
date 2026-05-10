@@ -3,10 +3,10 @@ package com.example.tripshot.screens
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -26,29 +26,24 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -58,6 +53,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -76,37 +72,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tripshot.R
+import com.example.tripshot.data.CreateTripRequest
+import com.example.tripshot.data.TripRepository
+import com.example.tripshot.model.User
 import com.example.tripshot.ui.theme.TripShotBgColor
 import com.example.tripshot.ui.theme.TripShotDividerColor
 import com.example.tripshot.ui.theme.TripShotHint
 import com.example.tripshot.ui.theme.TripShotPrimary
-import com.example.tripshot.ui.theme.TripShotSurfaceColor
 import com.example.tripshot.ui.theme.TripShotTextPrimary
 import com.example.tripshot.ui.theme.TripShotTextSecondary
+import com.example.tripshot.util.TripNotificationCalculator
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-enum class IntensityOption {
-    CHILL,
-    BALANCED,
-    INTENSE
-}
-
 data class InviteeUi(
-    val name: String,
-    val avatar: Painter? = null
+    val uid: String,
+    val name: String
 )
 
 private const val ONE_MINUTE_MILLIS = 60_000L
@@ -116,10 +108,18 @@ fun CreateScreen(
     modifier: Modifier = Modifier,
     onSaveClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val auth = remember { FirebaseAuth.getInstance() }
+    val firestore = remember { FirebaseFirestore.getInstance() }
+    val tripRepository = remember { TripRepository() }
+    val currentUserId = auth.currentUser?.uid
+
     var tripName by rememberSaveable { mutableStateOf("") }
     var selectedCoverUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var isSavingTrip by remember { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var availableUsers by remember { mutableStateOf<List<User>>(emptyList()) }
 
-    // Initialize with default dates (today and 3 days from now)
     val calendar = Calendar.getInstance()
     val defaultStartTime = calendar.timeInMillis
     calendar.add(Calendar.DAY_OF_MONTH, 3)
@@ -128,35 +128,15 @@ fun CreateScreen(
     var startDateTimeMillis by rememberSaveable { mutableLongStateOf(defaultStartTime) }
     var endDateTimeMillis by rememberSaveable { mutableLongStateOf(defaultEndTime) }
 
-    // Calculate duration in days
-    val durationInDays = remember(startDateTimeMillis, endDateTimeMillis) {
-        val diff = endDateTimeMillis - startDateTimeMillis
-        (diff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
+    val schedule = remember(startDateTimeMillis, endDateTimeMillis) {
+        TripNotificationCalculator.calculate(
+            startDateTimeMillis = startDateTimeMillis,
+            endDateTimeMillis = endDateTimeMillis
+        )
     }
-
-    // Calculate photo count based on AGENTS.md rules
-    val photoCount = remember(durationInDays) {
-        when {
-            durationInDays <= 7 -> durationInDays * 2
-            durationInDays <= 14 -> durationInDays + 7
-            else -> durationInDays
-        }
-    }
-
-    // Calculate interval in hours based on AGENTS.md rules
-    val intervalHours = remember(durationInDays) {
-        when {
-            durationInDays <= 7 -> 12
-            durationInDays <= 14 -> 16
-            else -> 24
-        }
-    }
-
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    var selectedIntensity by rememberSaveable {
-        mutableStateOf(IntensityOption.BALANCED)
-    }
-    var isPublicTrip by rememberSaveable { mutableStateOf(true) }
+    val durationInDays = schedule.durationInDays
+    val dailyPhotoNotificationRate = schedule.dailyPhotoNotificationRate
+    val totalPhotoNotifications = schedule.totalPhotoNotifications
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> selectedCoverUri = uri?.toString() }
@@ -164,10 +144,54 @@ fun CreateScreen(
 
     val invitees = rememberSaveable(
         saver = listSaver(
-            save = { inviteeList -> inviteeList.map(InviteeUi::name) },
-            restore = { names -> names.mapTo(mutableStateListOf()) { InviteeUi(it) } }
+            save = { inviteeList ->
+                inviteeList.flatMap { invitee -> listOf(invitee.uid, invitee.name) }
+            },
+            restore = { rawValues ->
+                rawValues.chunked(2)
+                    .mapNotNull { chunk ->
+                        val uid = chunk.getOrNull(0) as? String ?: return@mapNotNull null
+                        val name = chunk.getOrNull(1) as? String ?: return@mapNotNull null
+                        InviteeUi(uid = uid, name = name)
+                    }
+                    .mapTo(mutableStateListOf()) { it }
+            }
         )
     ) { mutableStateListOf<InviteeUi>() }
+    val selectedInviteeIds = invitees.map(InviteeUi::uid).toSet()
+    val normalizedSearchQuery = searchQuery.trim()
+    val inviteSearchResults = remember(availableUsers, normalizedSearchQuery, selectedInviteeIds) {
+        if (normalizedSearchQuery.isBlank()) {
+            emptyList()
+        } else {
+            availableUsers
+                .filter { user ->
+                    user.uid.isNotBlank() &&
+                        user.name.contains(normalizedSearchQuery, ignoreCase = true) &&
+                        !selectedInviteeIds.contains(user.uid)
+                }
+                .take(8)
+        }
+    }
+
+    DisposableEffect(currentUserId) {
+        if (currentUserId == null) {
+            availableUsers = emptyList()
+            onDispose { }
+        } else {
+            val registration = firestore.collection("users")
+                .addSnapshotListener { snapshot, _ ->
+                    availableUsers = snapshot?.documents
+                        ?.mapNotNull { it.toObject(User::class.java) }
+                        ?.filter { user ->
+                            user.uid.isNotBlank() && user.uid != currentUserId
+                        }
+                        ?: emptyList()
+                }
+
+            onDispose { registration.remove() }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -211,51 +235,113 @@ fun CreateScreen(
                 }
             )
 
-            MomentIntensitySection(
-                selected = selectedIntensity,
-                onSelect = { selectedIntensity = it },
+            TripScheduleSection(
                 durationInDays = durationInDays,
-                photoCount = photoCount,
-                intervalHours = intervalHours
+                totalPhotoNotifications = totalPhotoNotifications,
+                dailyPhotoNotificationRate = dailyPhotoNotificationRate
             )
 
             InviteExplorersSection(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
                 invitees = invitees,
-                onAddInviteeFromSearch = {
-                    val newName = searchQuery.trim()
-                    if (newName.isNotEmpty() && invitees.none { it.name.equals(newName, ignoreCase = true) }) {
-                        invitees.add(InviteeUi(newName))
-                        searchQuery = ""
+                searchResults = inviteSearchResults,
+                onSelectInvitee = { selectedUser ->
+                    if (invitees.none { it.uid == selectedUser.uid }) {
+                        invitees.add(InviteeUi(uid = selectedUser.uid, name = selectedUser.name))
                     }
+                    searchQuery = ""
                 },
                 onRemoveInvitee = { invitees.remove(it) }
-            )
-
-            PublicTripSection(
-                checked = isPublicTrip,
-                onCheckedChange = { isPublicTrip = it }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = onSaveClick,
+                onClick = {
+                    if (tripName.isBlank()) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.create_trip_error_trip_name_required),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+                    if (currentUserId == null) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.create_trip_error_auth_required),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+
+                    isSavingTrip = true
+                    tripRepository.createTrip(
+                        request = CreateTripRequest(
+                            name = tripName.trim(),
+                            coverImageUri = selectedCoverUri?.let(Uri::parse),
+                            startDateTimeMillis = startDateTimeMillis,
+                            endDateTimeMillis = endDateTimeMillis,
+                            invitedUserIds = invitees.map(InviteeUi::uid),
+                            dailyPhotoNotificationRate = dailyPhotoNotificationRate,
+                            totalPhotoNotifications = totalPhotoNotifications
+                        ),
+                        onSuccess = {
+                            isSavingTrip = false
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.create_trip_save_success),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            onSaveClick()
+                        },
+                        onFailure = { throwable ->
+                            isSavingTrip = false
+                            Toast.makeText(
+                                context,
+                                context.getString(
+                                    R.string.create_trip_error_save_failed,
+                                    throwable.message ?: ""
+                                ),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    )
+                },
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = TripShotPrimary,
                     contentColor = Color.White
                 ),
+                enabled = !isSavingTrip,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.create_trip_button),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
+                if (isSavingTrip) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            text = stringResource(R.string.create_trip_create_in_progress),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.create_trip_button),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
             }
         }
     }
@@ -628,151 +714,26 @@ fun DateTimeField(
 }
 
 @Composable
-fun MomentIntensitySection(
-    selected: IntensityOption,
-    onSelect: (IntensityOption) -> Unit,
+fun TripScheduleSection(
     durationInDays: Int,
-    photoCount: Int,
-    intervalHours: Int
+    totalPhotoNotifications: Int,
+    dailyPhotoNotificationRate: Double
 ) {
-    Surface(
-        color = TripShotSurfaceColor,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, TripShotDividerColor),
-        tonalElevation = 0.dp,
-        shadowElevation = 8.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = stringResource(R.string.create_trip_moment_intensity),
-                        color = TripShotPrimary,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = stringResource(R.string.create_trip_intensity_description),
-                        color = TripShotTextSecondary,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
-                    )
-                }
-
-                IntensityBadge(text = selected.name)
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                IntensityCard(
-                    label = stringResource(R.string.create_trip_intensity_chill),
-                    iconText = "☾",
-                    selected = selected == IntensityOption.CHILL,
-                    onClick = { onSelect(IntensityOption.CHILL) },
-                    modifier = Modifier.weight(1f)
-                )
-
-                IntensityCard(
-                    label = stringResource(R.string.create_trip_intensity_balanced),
-                    iconText = "⚖",
-                    selected = selected == IntensityOption.BALANCED,
-                    onClick = { onSelect(IntensityOption.BALANCED) },
-                    modifier = Modifier.weight(1f)
-                )
-
-                IntensityCard(
-                    label = stringResource(R.string.create_trip_intensity_intense),
-                    iconText = "⚡",
-                    selected = selected == IntensityOption.INTENSE,
-                    onClick = { onSelect(IntensityOption.INTENSE) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            StatsRow(
-                durationInDays = durationInDays,
-                photoCount = photoCount
-            )
-
-            Text(
-                text = stringResource(
-                    R.string.create_trip_notification_note_formatted,
-                    (24 / intervalHours),
-                    selected.name.lowercase().replaceFirstChar { it.uppercase() }
-                ),
-                color = TripShotTextSecondary,
-                fontSize = 12.sp,
-                lineHeight = 20.sp
-            )
-        }
-    }
-}
-
-@Composable
-fun IntensityBadge(text: String) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = TripShotPrimary.copy(alpha = 0.1f),
-        border = BorderStroke(1.dp, TripShotPrimary.copy(alpha = 0.25f))
-    ) {
-        Text(
-            text = text,
-            color = TripShotPrimary,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatsRow(
+            durationInDays = durationInDays,
+            photoCount = totalPhotoNotifications
         )
-    }
-}
-
-@Composable
-fun IntensityCard(
-    label: String,
-    iconText: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val border = if (selected) TripShotPrimary else TripShotDividerColor
-    val bg = if (selected) TripShotPrimary.copy(alpha = 0.06f) else Color.Transparent
-    val contentColor = if (selected) TripShotPrimary else TripShotTextPrimary
-
-    Surface(
-        color = bg,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, border),
-        modifier = modifier.clickable { onClick() }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = iconText,
-                color = contentColor,
-                fontSize = 22.sp
-            )
-
-            Text(
-                text = label,
-                color = contentColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp,
-                textAlign = TextAlign.Center
-            )
-        }
+        Text(
+            text = stringResource(
+                R.string.create_trip_notification_note_formatted,
+                dailyPhotoNotificationRate,
+                TripNotificationCalculator.MAX_DAILY_PHOTO_NOTIFICATIONS.toInt()
+            ),
+            color = TripShotTextSecondary,
+            fontSize = 12.sp,
+            lineHeight = 20.sp
+        )
     }
 }
 
@@ -844,7 +805,8 @@ fun InviteExplorersSection(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     invitees: List<InviteeUi>,
-    onAddInviteeFromSearch: () -> Unit,
+    searchResults: List<User>,
+    onSelectInvitee: (User) -> Unit,
     onRemoveInvitee: (InviteeUi) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -852,9 +814,27 @@ fun InviteExplorersSection(
 
         SearchField(
             value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            onAddFromSearch = onAddInviteeFromSearch
+            onValueChange = onSearchQueryChange
         )
+
+        if (searchQuery.trim().isNotBlank()) {
+            if (searchResults.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.create_trip_search_no_users),
+                    color = TripShotTextSecondary,
+                    fontSize = 13.sp
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    searchResults.forEach { user ->
+                        InviteSearchResultItem(
+                            user = user,
+                            onAddClick = { onSelectInvitee(user) }
+                        )
+                    }
+                }
+            }
+        }
 
         Row(
             modifier = Modifier
@@ -875,11 +855,8 @@ fun InviteExplorersSection(
 @Composable
 fun SearchField(
     value: String,
-    onValueChange: (String) -> Unit,
-    onAddFromSearch: () -> Unit
+    onValueChange: (String) -> Unit
 ) {
-    val canAddInvitee = value.isNotBlank()
-
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -897,22 +874,6 @@ fun SearchField(
                 tint = TripShotTextSecondary
             )
         },
-        trailingIcon = {
-            IconButton(
-                onClick = onAddFromSearch,
-                enabled = canAddInvitee
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.content_desc_add),
-                    tint = if (canAddInvitee) TripShotPrimary else TripShotTextSecondary
-                )
-            }
-        },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(
-            onDone = { onAddFromSearch() }
-        ),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = Color(0xFF242424),
             unfocusedContainerColor = Color(0xFF242424),
@@ -926,6 +887,39 @@ fun SearchField(
         shape = RoundedCornerShape(999.dp),
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+@Composable
+fun InviteSearchResultItem(
+    user: User,
+    onAddClick: () -> Unit
+) {
+    Surface(
+        color = Color(0xFF242424),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, TripShotDividerColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = user.name,
+                color = TripShotTextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            TextButton(onClick = onAddClick) {
+                Text(
+                    text = stringResource(R.string.create_trip_add_invitee),
+                    color = TripShotPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -975,73 +969,6 @@ fun InviteeChip(
                     fontWeight = FontWeight.Bold
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun PublicTripSection(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Surface(
-        color = Color(0xFF242424),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, TripShotDividerColor)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(width = 40.dp, height = 56.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(TripShotPrimary.copy(alpha = 0.1f))
-                    .border(
-                        width = 1.dp,
-                        color = TripShotPrimary.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(16.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = stringResource(R.string.content_desc_public),
-                    tint = TripShotPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.width(20.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.create_trip_public_trip),
-                    color = TripShotTextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.create_trip_public_trip_description),
-                    color = TripShotTextSecondary,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp
-                )
-            }
-
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = TripShotPrimary,
-                    uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = Color(0xFF555555)
-                )
-            )
         }
     }
 }
