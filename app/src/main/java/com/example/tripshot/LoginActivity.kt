@@ -13,6 +13,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -55,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -140,8 +142,33 @@ fun AuthRoot(modifier: Modifier = Modifier, onAuthSuccess: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(32.dp))
 
         // Animated screen content
+        val swipeThresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
         AnimatedContent(
             targetState = currentScreen,
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(currentScreen) {
+                    var totalDragX = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { totalDragX = 0f },
+                        onHorizontalDrag = { change, dragAmount ->
+                            totalDragX += dragAmount
+                            change.consume()
+                        },
+                        onDragCancel = { totalDragX = 0f },
+                        onDragEnd = {
+                            when {
+                                totalDragX <= -swipeThresholdPx && currentScreen == AuthScreen.LOGIN -> {
+                                    currentScreen = AuthScreen.SIGNUP
+                                }
+
+                                totalDragX >= swipeThresholdPx && currentScreen == AuthScreen.SIGNUP -> {
+                                    currentScreen = AuthScreen.LOGIN
+                                }
+                            }
+                        }
+                    )
+                },
             transitionSpec = {
                 val toRight = targetState == AuthScreen.SIGNUP
                 slideInHorizontally(

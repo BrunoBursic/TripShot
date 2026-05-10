@@ -105,7 +105,39 @@ class TripRepository(
             .addOnFailureListener(onFailure)
     }
 
-    fun observeTripsCreatedByOthers(
+    fun observeTripsByCreator(
+        currentUserId: String,
+        includeCurrentUserTrips: Boolean,
+        onTripsChanged: (List<Trip>) -> Unit,
+        onFailure: (Throwable) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection("trips")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onFailure(error)
+                    return@addSnapshotListener
+                }
+
+                val trips = snapshot?.documents
+                    ?.mapNotNull(::mapTrip)
+                    ?.filter { trip ->
+                        val isCurrentUserCreator = trip.creatorId == currentUserId
+                        trip.id.isNotBlank() &&
+                            trip.creatorId.isNotBlank() &&
+                            if (includeCurrentUserTrips) {
+                                isCurrentUserCreator
+                            } else {
+                                !isCurrentUserCreator
+                            }
+                    }
+                    ?.sortedByDescending { trip -> trip.createdAt?.toDate()?.time ?: 0L }
+                    ?: emptyList()
+
+                onTripsChanged(trips)
+            }
+    }
+
+    fun observeTripsParticipatedByUser(
         currentUserId: String,
         onTripsChanged: (List<Trip>) -> Unit,
         onFailure: (Throwable) -> Unit
@@ -120,9 +152,11 @@ class TripRepository(
                 val trips = snapshot?.documents
                     ?.mapNotNull(::mapTrip)
                     ?.filter { trip ->
+                        val isCreator = trip.creatorId == currentUserId
+                        val isMember = trip.memberIds.contains(currentUserId)
                         trip.id.isNotBlank() &&
                             trip.creatorId.isNotBlank() &&
-                            trip.creatorId != currentUserId
+                            (isCreator || isMember)
                     }
                     ?.sortedByDescending { trip -> trip.createdAt?.toDate()?.time ?: 0L }
                     ?: emptyList()
