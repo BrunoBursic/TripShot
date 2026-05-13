@@ -1,7 +1,9 @@
 package com.example.tripshot.screens
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,10 +14,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -46,6 +53,7 @@ fun ExploreScreen() {
     val currentUserId = auth.currentUser?.uid
     val context = LocalContext.current
 
+    var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var users by remember { mutableStateOf<List<User>>(emptyList()) }
     var followingUserIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -121,76 +129,116 @@ fun ExploreScreen() {
                 ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(text = stringResource(R.string.explore_search_placeholder)) },
-                singleLine = true
-            )
-
-            if (isLoadingUsers || isLoadingFollowing) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.End
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    CircularProgressIndicator()
+                    IconButton(
+                        onClick = { isSearchExpanded = !isSearchExpanded }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = stringResource(R.string.content_desc_search),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
-            } else if (query.isNotBlank() && filteredUsers.isNotEmpty()) {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(filteredUsers, key = { it.uid }) { user ->
-                        val isFollowing = followingUserIds.contains(user.uid)
-                        val isRequestInProgress = followRequestsInProgress.contains(user.uid)
+            }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = user.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f)
-                            )
+            AnimatedVisibility(visible = isSearchExpanded) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = stringResource(R.string.explore_search_placeholder)) },
+                    singleLine = true
+                )
+            }
 
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Button(
-                                onClick = {
-                                    if (currentUserId == null || isFollowing || isRequestInProgress) {
-                                        return@Button
-                                    }
-
-                                    followRequestsInProgress = followRequestsInProgress + user.uid
-                                    followUser(
-                                        firestore = firestore,
-                                        currentUserId = currentUserId,
-                                        targetUserId = user.uid,
-                                        onComplete = { success ->
-                                            followRequestsInProgress = followRequestsInProgress - user.uid
-                                            if (!success) {
-                                                Toast.makeText(
-                                                    context,
-                                                    context.getString(R.string.explore_follow_failed),
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
-                                        }
-                                    )
-                                },
-                                enabled = !isFollowing && !isRequestInProgress
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isSearchExpanded && query.isNotBlank()) {
+                    when {
+                        isLoadingUsers || isLoadingFollowing -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
                             ) {
-                                val buttonText = if (isFollowing) {
-                                    stringResource(R.string.explore_following)
-                                } else {
-                                    stringResource(R.string.explore_follow)
+                                CircularProgressIndicator()
+                            }
+                        }
+
+                        filteredUsers.isEmpty() -> {
+                            Text(
+                                text = stringResource(R.string.explore_no_users_found),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        else -> {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(filteredUsers, key = { it.uid }) { user ->
+                                    val isFollowing = followingUserIds.contains(user.uid)
+                                    val isRequestInProgress = followRequestsInProgress.contains(user.uid)
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = user.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Button(
+                                            onClick = {
+                                                if (currentUserId == null || isFollowing || isRequestInProgress) {
+                                                    return@Button
+                                                }
+
+                                                followRequestsInProgress = followRequestsInProgress + user.uid
+                                                followUser(
+                                                    firestore = firestore,
+                                                    currentUserId = currentUserId,
+                                                    targetUserId = user.uid,
+                                                    onComplete = { success ->
+                                                        followRequestsInProgress = followRequestsInProgress - user.uid
+                                                        if (!success) {
+                                                            Toast.makeText(
+                                                                context,
+                                                                context.getString(R.string.explore_follow_failed),
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                    }
+                                                )
+                                            },
+                                            enabled = !isFollowing && !isRequestInProgress
+                                        ) {
+                                            val buttonText = if (isFollowing) {
+                                                stringResource(R.string.explore_following)
+                                            } else {
+                                                stringResource(R.string.explore_follow)
+                                            }
+                                            Text(text = buttonText)
+                                        }
+                                    }
                                 }
-                                Text(text = buttonText)
                             }
                         }
                     }
+                } else {
+                    CommunityTripsFeed(modifier = Modifier.fillMaxSize())
                 }
             }
         }
