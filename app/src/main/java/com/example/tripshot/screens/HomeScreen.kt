@@ -8,7 +8,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,14 +28,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -77,11 +72,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.max
 
-private enum class HomeTripMode {
-    COMMUNITY,
-    YOUR_TRIPS
-}
-
 private enum class HomeSectionState {
     LOADING,
     ERROR,
@@ -96,55 +86,21 @@ fun HomeScreen() {
     val context = LocalContext.current
     val currentUser = auth.currentUser
     val currentUserId = currentUser?.uid
-    val currentUserName = remember(currentUser?.displayName, currentUser?.email) {
-        currentUser?.displayName
-            ?.takeIf { it.isNotBlank() }
-            ?: currentUser?.email
-                ?.substringBefore("@")
-                ?.takeIf { it.isNotBlank() }
-            ?: context.getString(R.string.home_default_comment_user_name)
-    }
-
-    var communityIsLoading by remember { mutableStateOf(true) }
-    var communityErrorMessage by remember { mutableStateOf<String?>(null) }
-    var communityTrips by remember { mutableStateOf<List<Trip>>(emptyList()) }
 
     var yourTripsIsLoading by remember { mutableStateOf(true) }
     var yourTripsErrorMessage by remember { mutableStateOf<String?>(null) }
     var yourTrips by remember { mutableStateOf<List<Trip>>(emptyList()) }
 
-    var selectedModeName by rememberSaveable { mutableStateOf(HomeTripMode.COMMUNITY.name) }
-    val selectedMode = HomeTripMode.valueOf(selectedModeName)
-
     DisposableEffect(currentUserId) {
         if (currentUserId == null) {
-            communityIsLoading = false
-            communityTrips = emptyList()
-            communityErrorMessage = context.getString(R.string.home_auth_required)
-
             yourTripsIsLoading = false
             yourTrips = emptyList()
             yourTripsErrorMessage = context.getString(R.string.home_auth_required_your_trips)
             onDispose { }
         } else {
-            communityIsLoading = true
-            communityErrorMessage = null
             yourTripsIsLoading = true
             yourTripsErrorMessage = null
 
-            val communityRegistration = tripRepository.observeTripsByCreator(
-                currentUserId = currentUserId,
-                includeCurrentUserTrips = false,
-                onTripsChanged = { updatedTrips ->
-                    communityTrips = updatedTrips
-                    communityIsLoading = false
-                },
-                onFailure = { throwable ->
-                    communityErrorMessage = throwable.message
-                        ?: context.getString(R.string.home_feed_load_failed)
-                    communityIsLoading = false
-                }
-            )
             val yourTripsRegistration = tripRepository.observeTripsParticipatedByUser(
                 currentUserId = currentUserId,
                 onTripsChanged = { updatedTrips ->
@@ -159,7 +115,6 @@ fun HomeScreen() {
             )
 
             onDispose {
-                communityRegistration.remove()
                 yourTripsRegistration.remove()
             }
         }
@@ -181,154 +136,50 @@ fun HomeScreen() {
                 ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            HomeTripModeToggle(
-                selectedMode = selectedMode,
-                onModeSelected = { selectedModeName = it.name }
-            )
-
+            val activeTrips = yourTrips.filter { it.endDateTimeMillis > System.currentTimeMillis() }
+            val pastTrips = yourTrips.filter { it.endDateTimeMillis <= System.currentTimeMillis() }
+            val yourTripsState = when {
+                yourTripsIsLoading -> HomeSectionState.LOADING
+                yourTripsErrorMessage != null -> HomeSectionState.ERROR
+                else -> HomeSectionState.CONTENT
+            }
             AnimatedContent(
-                targetState = selectedMode,
+                targetState = yourTripsState,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(240))
-                        .togetherWith(fadeOut(animationSpec = tween(200)))
+                    (fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { it / 12 })
+                        .togetherWith(fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { -it / 12 })
                 },
-                label = "home-mode-transition"
-            ) { mode ->
-                when (mode) {
-                    HomeTripMode.COMMUNITY -> {
-                        Column(
+                label = "your-trips-content-transition"
+            ) { state ->
+                when (state) {
+                    HomeSectionState.LOADING -> {
+                        Box(
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = stringResource(R.string.home_community_feed),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = TripShotPrimary
-                            )
-                            Text(
-                                text = stringResource(R.string.home_shared_trips_title),
-                                style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                fontWeight = FontWeight.Bold
-                            )
-                            val communityState = when {
-                                communityIsLoading -> HomeSectionState.LOADING
-                                communityErrorMessage != null -> HomeSectionState.ERROR
-                                communityTrips.isEmpty() -> HomeSectionState.EMPTY
-                                else -> HomeSectionState.CONTENT
-                            }
-                            AnimatedContent(
-                                targetState = communityState,
-                                transitionSpec = {
-                                    (fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { it / 12 })
-                                        .togetherWith(fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { -it / 12 })
-                                },
-                                label = "community-content-transition"
-                            ) { state ->
-                                when (state) {
-                                    HomeSectionState.LOADING -> {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator()
-                                        }
-                                    }
-
-                                    HomeSectionState.ERROR -> {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = communityErrorMessage.orEmpty(),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
-
-                                    HomeSectionState.EMPTY -> {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.home_no_shared_trips),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-
-                                    HomeSectionState.CONTENT -> {
-                                        LazyColumn(
-                                            modifier = Modifier.fillMaxSize(),
-                                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                                        ) {
-                                            items(communityTrips, key = { it.id }) { trip ->
-                                                SharedTripCard(
-                                                    trip = trip,
-                                                    currentUserId = currentUserId,
-                                                    currentUserName = currentUserName,
-                                                    tripRepository = tripRepository
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            CircularProgressIndicator()
                         }
                     }
 
-                    HomeTripMode.YOUR_TRIPS -> {
-                        val activeTrips = yourTrips.filter { it.endDateTimeMillis > System.currentTimeMillis() }
-                        val pastTrips = yourTrips.filter { it.endDateTimeMillis <= System.currentTimeMillis() }
-                        val yourTripsState = when {
-                            yourTripsIsLoading -> HomeSectionState.LOADING
-                            yourTripsErrorMessage != null -> HomeSectionState.ERROR
-                            else -> HomeSectionState.CONTENT
+                    HomeSectionState.ERROR -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = yourTripsErrorMessage.orEmpty(),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
-                        AnimatedContent(
-                            targetState = yourTripsState,
-                            transitionSpec = {
-                                (fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { it / 12 })
-                                    .togetherWith(fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { -it / 12 })
-                            },
-                            label = "your-trips-content-transition"
-                        ) { state ->
-                            when (state) {
-                                HomeSectionState.LOADING -> {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator()
-                                    }
-                                }
+                    }
 
-                                HomeSectionState.ERROR -> {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = yourTripsErrorMessage.orEmpty(),
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                }
-
-                                HomeSectionState.EMPTY,
-                                HomeSectionState.CONTENT -> {
-                                    YourTripsContent(
-                                        activeTrips = activeTrips,
-                                        pastTrips = pastTrips
-                                    )
-                                }
-                            }
-                        }
+                    HomeSectionState.EMPTY,
+                    HomeSectionState.CONTENT -> {
+                        YourTripsContent(
+                            activeTrips = activeTrips,
+                            pastTrips = pastTrips
+                        )
                     }
                 }
             }
@@ -337,74 +188,137 @@ fun HomeScreen() {
 }
 
 @Composable
-private fun HomeTripModeToggle(
-    selectedMode: HomeTripMode,
-    onModeSelected: (HomeTripMode) -> Unit
-) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val selectedLabel = if (selectedMode == HomeTripMode.COMMUNITY) {
-        stringResource(R.string.home_toggle_community_trips)
-    } else {
-        stringResource(R.string.home_toggle_your_trips)
+fun CommunityTripsFeed(modifier: Modifier = Modifier) {
+    val auth = remember { FirebaseAuth.getInstance() }
+    val tripRepository = remember { TripRepository() }
+    val context = LocalContext.current
+    val currentUser = auth.currentUser
+    val currentUserId = currentUser?.uid
+    val currentUserName = remember(currentUser?.displayName, currentUser?.email) {
+        currentUser?.displayName
+            ?.takeIf { it.isNotBlank() }
+            ?: currentUser?.email
+                ?.substringBefore("@")
+                ?.takeIf { it.isNotBlank() }
+            ?: context.getString(R.string.home_default_comment_user_name)
     }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 2.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = selectedLabel,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground
-            )
-        }
+    var communityIsLoading by remember { mutableStateOf(true) }
+    var communityErrorMessage by remember { mutableStateOf<String?>(null) }
+    var communityTrips by remember { mutableStateOf<List<Trip>>(emptyList()) }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.home_toggle_community_trips)) },
-                leadingIcon = {
-                    if (selectedMode == HomeTripMode.COMMUNITY) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null
-                        )
-                    }
+    DisposableEffect(currentUserId) {
+        if (currentUserId == null) {
+            communityIsLoading = false
+            communityTrips = emptyList()
+            communityErrorMessage = context.getString(R.string.home_auth_required)
+            onDispose { }
+        } else {
+            communityIsLoading = true
+            communityErrorMessage = null
+
+            val communityRegistration = tripRepository.observeTripsByCreator(
+                currentUserId = currentUserId,
+                includeCurrentUserTrips = false,
+                onTripsChanged = { updatedTrips ->
+                    communityTrips = updatedTrips
+                    communityIsLoading = false
                 },
-                onClick = {
-                    expanded = false
-                    onModeSelected(HomeTripMode.COMMUNITY)
+                onFailure = { throwable ->
+                    communityErrorMessage = throwable.message
+                        ?: context.getString(R.string.home_feed_load_failed)
+                    communityIsLoading = false
                 }
             )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.home_toggle_your_trips)) },
-                leadingIcon = {
-                    if (selectedMode == HomeTripMode.YOUR_TRIPS) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null
+
+            onDispose {
+                communityRegistration.remove()
+            }
+        }
+    }
+
+    val communityState = when {
+        communityIsLoading -> HomeSectionState.LOADING
+        communityErrorMessage != null -> HomeSectionState.ERROR
+        communityTrips.isEmpty() -> HomeSectionState.EMPTY
+        else -> HomeSectionState.CONTENT
+    }
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.home_community_feed),
+            style = MaterialTheme.typography.labelLarge,
+            color = TripShotPrimary
+        )
+        Text(
+            text = stringResource(R.string.home_shared_trips_title),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
+        )
+        AnimatedContent(
+            targetState = communityState,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { it / 12 })
+                    .togetherWith(fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { -it / 12 })
+            },
+            label = "community-content-transition"
+        ) { state ->
+            when (state) {
+                HomeSectionState.LOADING -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                HomeSectionState.ERROR -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = communityErrorMessage.orEmpty(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
-                },
-                onClick = {
-                    expanded = false
-                    onModeSelected(HomeTripMode.YOUR_TRIPS)
                 }
-            )
+
+                HomeSectionState.EMPTY -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.home_no_shared_trips),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                HomeSectionState.CONTENT -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(communityTrips, key = { it.id }) { trip ->
+                            SharedTripCard(
+                                trip = trip,
+                                currentUserId = currentUserId,
+                                currentUserName = currentUserName,
+                                tripRepository = tripRepository
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
