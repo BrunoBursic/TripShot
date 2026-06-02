@@ -80,7 +80,7 @@ private enum class HomeSectionState {
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onTripClick: (String) -> Unit = {}) {
     val auth = remember { FirebaseAuth.getInstance() }
     val tripRepository = remember { TripRepository() }
     val context = LocalContext.current
@@ -178,7 +178,8 @@ fun HomeScreen() {
                     HomeSectionState.CONTENT -> {
                         YourTripsContent(
                             activeTrips = activeTrips,
-                            pastTrips = pastTrips
+                            pastTrips = pastTrips,
+                            onTripClick = onTripClick
                         )
                     }
                 }
@@ -188,7 +189,7 @@ fun HomeScreen() {
 }
 
 @Composable
-fun CommunityTripsFeed(modifier: Modifier = Modifier) {
+fun CommunityTripsFeed(modifier: Modifier = Modifier, onTripClick: (String) -> Unit = {}) {
     val auth = remember { FirebaseAuth.getInstance() }
     val tripRepository = remember { TripRepository() }
     val context = LocalContext.current
@@ -313,7 +314,8 @@ fun CommunityTripsFeed(modifier: Modifier = Modifier) {
                                 trip = trip,
                                 currentUserId = currentUserId,
                                 currentUserName = currentUserName,
-                                tripRepository = tripRepository
+                                tripRepository = tripRepository,
+                                onTripClick = onTripClick
                             )
                         }
                     }
@@ -326,7 +328,8 @@ fun CommunityTripsFeed(modifier: Modifier = Modifier) {
 @Composable
 private fun YourTripsContent(
     activeTrips: List<Trip>,
-    pastTrips: List<Trip>
+    pastTrips: List<Trip>,
+    onTripClick: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -377,7 +380,8 @@ private fun YourTripsContent(
             items(activeTrips, key = { it.id }) { trip ->
                 YourTripCard(
                     trip = trip,
-                    showCompletedLabel = false
+                    showCompletedLabel = false,
+                    onTripClick = onTripClick
                 )
             }
         }
@@ -409,7 +413,8 @@ private fun YourTripsContent(
             items(pastTrips, key = { it.id }) { trip ->
                 YourTripCard(
                     trip = trip,
-                    showCompletedLabel = true
+                    showCompletedLabel = true,
+                    onTripClick = onTripClick
                 )
             }
         }
@@ -419,7 +424,8 @@ private fun YourTripsContent(
 @Composable
 private fun YourTripCard(
     trip: Trip,
-    showCompletedLabel: Boolean
+    showCompletedLabel: Boolean,
+    onTripClick: (String) -> Unit
 ) {
     val dayOfTrip = calculateDayOfTrip(trip)
     val tripDurationInDays = TripNotificationCalculator.calculate(
@@ -428,6 +434,7 @@ private fun YourTripCard(
     ).durationInDays
     val completedImageFilter = ColorMatrix().apply { setToSaturation(0f) }
     Surface(
+        onClick = { onTripClick(trip.id) },
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(28.dp),
         tonalElevation = 3.dp,
@@ -557,7 +564,8 @@ private fun SharedTripCard(
     trip: Trip,
     currentUserId: String?,
     currentUserName: String,
-    tripRepository: TripRepository
+    tripRepository: TripRepository,
+    onTripClick: (String) -> Unit = {}
 ) {
     var isLikedByCurrentUser by remember(trip.id, currentUserId) { mutableStateOf(false) }
     var isLikeRequestInProgress by remember(trip.id) { mutableStateOf(false) }
@@ -588,6 +596,7 @@ private fun SharedTripCard(
     }
 
     Surface(
+        onClick = { onTripClick(trip.id) },
         color = Color(0xFF141414),
         shape = RoundedCornerShape(28.dp),
         tonalElevation = 3.dp,

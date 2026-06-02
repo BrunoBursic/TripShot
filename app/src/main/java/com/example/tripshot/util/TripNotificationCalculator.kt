@@ -1,7 +1,7 @@
 package com.example.tripshot.util
 
 import kotlin.math.ceil
-import kotlin.math.min
+import kotlin.math.sqrt
 
 data class TripNotificationSchedule(
     val durationInDays: Int,
@@ -9,10 +9,14 @@ data class TripNotificationSchedule(
     val totalPhotoNotifications: Int
 )
 
+// Notifications are distributed randomly to individual travellers.
+// Formula: dailyRate = SCALE / sqrt(days), total = SCALE * sqrt(days).
+// A single constant controls overall volume; rate and total are derived identities
+// of the same relationship (total = rate × days), so no tiers or caps are needed.
 object TripNotificationCalculator {
     private const val ONE_MINUTE_MILLIS = 60_000L
     private const val ONE_DAY_MILLIS = 86_400_000L
-    const val MAX_DAILY_PHOTO_NOTIFICATIONS = 5.0
+    private const val NOTIFICATIONS_SCALE = 12.0
 
     fun calculate(
         startDateTimeMillis: Long,
@@ -22,13 +26,8 @@ object TripNotificationCalculator {
         val actualDurationDays = diffMillis.toDouble() / ONE_DAY_MILLIS.toDouble()
 
         val durationInDays = ceil(actualDurationDays).toInt().coerceAtLeast(1)
-        val tierDailyRate = when {
-            actualDurationDays <= 7.0 -> 2.0
-            actualDurationDays <= 14.0 -> 1.5
-            else -> 1.0
-        }
-        val dailyPhotoNotificationRate = min(tierDailyRate, MAX_DAILY_PHOTO_NOTIFICATIONS)
-        val totalPhotoNotifications = ceil(actualDurationDays * dailyPhotoNotificationRate)
+        val dailyPhotoNotificationRate = NOTIFICATIONS_SCALE / sqrt(actualDurationDays)
+        val totalPhotoNotifications = ceil(NOTIFICATIONS_SCALE * sqrt(actualDurationDays))
             .toInt()
             .coerceAtLeast(1)
 

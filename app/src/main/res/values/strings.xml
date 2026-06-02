@@ -69,6 +69,8 @@
     <string name="notification_new_follower_message">%1$s started following you</string>
     <string name="notification_channel_followers_name">New followers</string>
     <string name="notification_channel_followers_description">Alerts when someone starts following you</string>
+    <string name="notification_channel_photo_prompts_name">Photo prompts</string>
+    <string name="notification_channel_photo_prompts_description">Reminders to capture a moment during your trip</string>
     <string name="explore_search_placeholder">Search users by name</string>
     <string name="explore_search_hint">Type a name to find users</string>
     <string name="explore_no_users_found">No users found</string>
@@ -169,7 +171,7 @@
     <string name="create_trip_duration_value">3 Days</string>
     <string name="create_trip_exp_memories">EXP. MEMORIES</string>
     <string name="create_trip_memories_value">6 Photos</string>
-    <string name="create_trip_notification_note_formatted">* Notifications are calculated from trip duration: %1$.1f per day (max %2$d/day).</string>
+    <string name="create_trip_notification_note_formatted">* Notifications are distributed randomly to travellers: %1$.1f per day.</string>
     <string name="create_trip_invite_explorers">INVITE EXPLORERS</string>
     <string name="create_trip_search_placeholder">Search by name or @handle</string>
     <string name="create_trip_search_no_users">No users found</string>
@@ -185,4 +187,48 @@
     <string name="content_desc_trip_cover">Trip cover</string>
     <string name="content_desc_search">Search</string>
     <string name="content_desc_add">Add invitee</string>
+
+    <!-- Trip Detail Screen -->
+    <string name="trip_detail_current_expedition">CURRENT EXPEDITION</string>
+    <string name="trip_detail_past_expedition">PAST EXPEDITION</string>
+    <string name="trip_detail_travellers_title">Travellers</string>
+    <string name="trip_detail_travellers_overflow">+%1$d</string>
+    <string name="trip_detail_view_map">View Interactive Map</string>
+    <string name="trip_detail_shared_progress_label">SHARED PROGRESS</string>
+    <string name="trip_detail_moments_shared_count">%1$d / %2$d</string>
+    <string name="trip_detail_moments_word">Moments Shared</string>
+    <string name="trip_detail_percent">%1$d%%</string>
+    <string name="trip_detail_journal_title">Trip Journal Preview</string>
+    <string name="trip_detail_journal_see_all">See All Stories</string>
+    <string name="trip_detail_journal_empty">No moments shared yet. Start capturing your journey.</string>
+    <string name="trip_detail_back_content_desc">Back</string>
+    <string name="trip_detail_not_found">Trip not found</string>
+    <string name="trip_detail_go_back">Go back</string>
+    <string name="trip_detail_cover_content_desc">Trip cover image</string>
+    <string name="trip_detail_avatar_content_desc">Traveller avatar</string>
+
+    <!-- Travellers Screen -->
+    <string name="trip_travellers_title">Travellers</string>
+    <string name="trip_travellers_creator_badge">Creator</string>
+    <string name="trip_travellers_empty">No travellers found</string>
+
+    <!-- Photo Prompt / Live Moment -->
+    <string name="photo_prompt_notification_title">Time for a TripShot!</string>
+    <string name="photo_prompt_notification_body">Capture a moment from %1$s</string>
+    <string name="photo_prompt_live_moment_title">Live Moment</string>
+    <string name="photo_prompt_start_capturing">Start Capturing</string>
+    <string name="photo_prompt_dismiss">Not now</string>
+    <string name="photo_prompt_captured_at">Captured at: %1$s</string>
+    <string name="photo_prompt_location_unavailable">Location unavailable</string>
+    <string name="photo_prompt_write_memory_label">WRITE A MEMORY…</string>
+    <string name="photo_prompt_write_memory_placeholder">Describe this feeling…</string>
+    <string name="photo_prompt_retake">Retake</string>
+    <string name="photo_prompt_post_to_trip">Post to Trip</string>
+    <string name="photo_prompt_posting">Posting…</string>
+    <string name="photo_prompt_post_success">Moment posted!</string>
+    <string name="photo_prompt_post_failed">Couldn\'t post moment: %1$s</string>
+    <string name="photo_prompt_location_permission_rationale">Location access is needed to geotag your photo with where it was taken.</string>
+    <string name="content_desc_captured_photo">Captured photo</string>
+    <string name="content_desc_photo_prompt_camera">Camera icon</string>
+    <string name="photo_prompt_location_fetching">Getting location…</string>
 </resources>

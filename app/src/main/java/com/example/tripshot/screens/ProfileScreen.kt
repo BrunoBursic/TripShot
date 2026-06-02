@@ -10,6 +10,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,6 +43,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -71,11 +75,13 @@ import com.example.tripshot.R
 import com.example.tripshot.data.TripRepository
 import com.example.tripshot.model.Trip
 import com.example.tripshot.model.User
+import com.example.tripshot.ui.theme.TripShotPrimary
 import com.example.tripshot.util.TripNotificationCalculator
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.MetadataChanges
 import java.text.SimpleDateFormat
 import java.io.ByteArrayOutputStream
 import java.util.Date
@@ -89,7 +95,8 @@ import com.example.tripshot.util.ProfileImageUploader
 @Composable
 fun ProfileScreen(
     userId: String? = null,
-    allowEditing: Boolean = true
+    allowEditing: Boolean = true,
+    onTripClick: (String) -> Unit = {}
 ) {
     var user by remember { mutableStateOf<User?>(null) }
     var participatedTrips by remember { mutableStateOf<List<Trip>>(emptyList()) }
@@ -115,6 +122,10 @@ fun ProfileScreen(
     val canEdit = allowEditing && isOwnProfile
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Compute statusBarPadding eagerly so it's available for both the LazyColumn
+    // and the loading overlay regardless of loading state.
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -150,10 +161,17 @@ fun ProfileScreen(
             isTripsLoading = true
             tripLoadError = null
 
+            // MetadataChanges.INCLUDE fires for both cached and server snapshots.
+            // We only clear isProfileLoading once Firestore confirms the data came
+            // from the server (isFromCache == false), so a recently changed name is
+            // always shown rather than a stale cached value.
             val userRegistration = firestore.collection("users").document(targetUserId)
-                .addSnapshotListener { document, _ ->
-                    user = document?.toObject(User::class.java)
-                    isProfileLoading = false
+                .addSnapshotListener(MetadataChanges.INCLUDE) { document, _ ->
+                    val fetched = document?.toObject(User::class.java)
+                    if (fetched != null) user = fetched
+                    if (document?.metadata?.isFromCache == false || document == null) {
+                        isProfileLoading = false
+                    }
                 }
             val tripsRegistration = tripRepository.observeTripsParticipatedByUser(
                 currentUserId = targetUserId,
@@ -210,12 +228,9 @@ fun ProfileScreen(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        if (isProfileLoading || isTripsLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Content is always visible — the loading bar overlays it at the top
+            // instead of replacing it with a spinner, so there's no abrupt pop.
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
@@ -399,7 +414,7 @@ fun ProfileScreen(
                         }
                     }
 
-                    participatedTrips.isEmpty() -> {
+                    participatedTrips.isEmpty() && !isTripsLoading -> {
                         item {
                             Text(
                                 text = stringResource(R.string.profile_trips_empty),
@@ -413,11 +428,29 @@ fun ProfileScreen(
                         items(participatedTrips, key = { it.id }) { trip ->
                             ProfileTripCard(
                                 trip = trip,
-                                profileUserId = targetUserId
+                                profileUserId = targetUserId,
+                                onTripClick = onTripClick
                             )
                         }
                     }
                 }
+            }
+
+            // Loading bar fades in/out at the top of the screen while
+            // either the user profile or trips are still syncing with the server.
+            AnimatedVisibility(
+                visible = isProfileLoading || isTripsLoading,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = statusBarPadding),
+                    color = TripShotPrimary,
+                    trackColor = TripShotPrimary.copy(alpha = 0.2f)
+                )
             }
         }
     }
@@ -715,7 +748,8 @@ private fun loadFollowers(
 @Composable
 private fun ProfileTripCard(
     trip: Trip,
-    profileUserId: String?
+    profileUserId: String?,
+    onTripClick: (String) -> Unit
 ) {
     val isActive = trip.endDateTimeMillis > System.currentTimeMillis()
     val isCreator = trip.creatorId == profileUserId
@@ -728,6 +762,7 @@ private fun ProfileTripCard(
     )
 
     Surface(
+        onClick = { onTripClick(trip.id) },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
         color = MaterialTheme.colorScheme.surfaceVariant
