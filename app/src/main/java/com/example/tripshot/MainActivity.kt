@@ -33,15 +33,18 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.tripshot.screens.CreateScreen
 import com.example.tripshot.screens.ExploreScreen
 import com.example.tripshot.screens.HomeScreen
 import com.example.tripshot.screens.NotificationScreen
 import com.example.tripshot.screens.ProfileScreen
+import com.example.tripshot.screens.UserProfileScreen
 import com.example.tripshot.ui.theme.TripShotNavIndicator
 import com.example.tripshot.ui.theme.TripShotTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -71,7 +74,13 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
                     ) {
                         composable("home") { HomeScreen() }
-                        composable("explore") { ExploreScreen() }
+                        composable("explore") {
+                            ExploreScreen(
+                                onUserSelected = { userId ->
+                                    navController.navigate("user/$userId")
+                                }
+                            )
+                        }
                         composable("create") {
                             CreateScreen(
                                 onSaveClick = {
@@ -87,6 +96,19 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("notifications") { NotificationScreen() }
                         composable("profile") { ProfileScreen() }
+                        composable(
+                            route = "user/{userId}",
+                            arguments = listOf(
+                                navArgument("userId") { type = NavType.StringType }
+                            )
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getString("userId").orEmpty()
+                            if (userId.isBlank()) {
+                                ProfileScreen()
+                            } else {
+                                UserProfileScreen(userId = userId)
+                            }
+                        }
                     }
                 }
             }
