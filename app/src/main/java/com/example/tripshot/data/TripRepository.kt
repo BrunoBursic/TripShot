@@ -1,7 +1,10 @@
 package com.example.tripshot.data
 
-import com.example.tripshot.model.TripComment
+import android.net.Uri
 import com.example.tripshot.model.Trip
+import com.example.tripshot.model.TripComment
+import com.example.tripshot.model.TripMoment
+import com.example.tripshot.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
@@ -75,6 +78,7 @@ class TripRepository(
                         "invitedUserIds" to trip.invitedUserIds,
                         "dailyPhotoNotificationRate" to trip.dailyPhotoNotificationRate,
                         "totalPhotoNotifications" to trip.totalPhotoNotifications,
+                        "sharedMomentsCount" to 0,
                         "likeCount" to trip.likeCount,
                         "commentCount" to trip.commentCount,
                         "createdAt" to FieldValue.serverTimestamp()
@@ -274,6 +278,122 @@ class TripRepository(
         }.addOnFailureListener(onFailure)
     }
 
+    fun observeTrip(
+        tripId: String,
+        onTripChanged: (Trip?) -> Unit,
+        onFailure: (Throwable) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection("trips")
+            .document(tripId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onFailure(error)
+                    return@addSnapshotListener
+                }
+                onTripChanged(snapshot?.let { mapTrip(it) })
+            }
+    }
+
+    fun fetchUsersByIds(
+        userIds: List<String>,
+        onSuccess: (List<User>) -> Unit,
+        onFailure: (Throwable) -> Unit
+    ) {
+        if (userIds.isEmpty()) {
+            onSuccess(emptyList())
+            return
+        }
+        val results = arrayOfNulls<User>(userIds.size)
+        var pending = userIds.size
+        userIds.forEachIndexed { index, uid ->
+            firestore.collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    results[index] = snapshot.toObject(User::class.java)
+                    pending--
+                    if (pending == 0) onSuccess(results.filterNotNull())
+                }
+                .addOnFailureListener {
+                    pending--
+                    if (pending == 0) onSuccess(results.filterNotNull())
+                }
+        }
+    }
+
+    fun addTripMoment(
+        tripId: String,
+        userId: String,
+        userName: String,
+        imageUri: Uri,
+        description: String,
+        latitude: Double,
+        longitude: Double,
+        locationName: String,
+        onSuccess: () -> Unit,
+        onFailure: (Throwable) -> Unit
+    ) {
+        val tripRef = firestore.collection("trips").document(tripId)
+        val momentRef = tripRef.collection("moments").document()
+        val momentId = momentRef.id
+        val imageRef = storage.reference.child("trips/$tripId/moments/$momentId.jpg")
+
+        imageRef.putFile(imageUri)
+            .addOnSuccessListener {
+                imageRef.downloadUrl
+                    .addOnSuccessListener { downloadUri ->
+                        val imageUrl = downloadUri.toString()
+                        firestore.runTransaction { transaction ->
+                            val tripSnapshot = transaction.get(tripRef)
+                            val currentCount = tripSnapshot.getLong("sharedMomentsCount") ?: 0L
+
+                            transaction.set(
+                                momentRef,
+                                mapOf(
+                                    "id" to momentId,
+                                    "tripId" to tripId,
+                                    "userId" to userId,
+                                    "userName" to userName,
+                                    "imageUrl" to imageUrl,
+                                    "description" to description,
+                                    "latitude" to latitude,
+                                    "longitude" to longitude,
+                                    "locationName" to locationName,
+                                    "createdAt" to FieldValue.serverTimestamp()
+                                )
+                            )
+                            transaction.update(tripRef, "sharedMomentsCount", currentCount + 1L)
+                        }
+                            .addOnSuccessListener { onSuccess() }
+                            .addOnFailureListener(onFailure)
+                    }
+                    .addOnFailureListener(onFailure)
+            }
+            .addOnFailureListener(onFailure)
+    }
+
+    fun observeTripMoments(
+        tripId: String,
+        onMomentsChanged: (List<TripMoment>) -> Unit,
+        onFailure: (Throwable) -> Unit
+    ): ListenerRegistration {
+        return firestore.collection("trips")
+            .document(tripId)
+            .collection("moments")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onFailure(error)
+                    return@addSnapshotListener
+                }
+
+                val moments = snapshot?.documents
+                    ?.mapNotNull(::mapMoment)
+                    ?: emptyList()
+                onMomentsChanged(moments)
+            }
+    }
+
     private fun mapTrip(document: DocumentSnapshot): Trip? {
         val trip = document.toObject(Trip::class.java) ?: return null
         val likeCount = (document.getLong("likeCount") ?: trip.likeCount.toLong()).toInt()
@@ -298,6 +418,25 @@ class TripRepository(
             userId = userId,
             userName = document.getString("userName").orEmpty(),
             message = message,
+            createdAt = document.getTimestamp("createdAt")
+        )
+    }
+
+    private fun mapMoment(document: DocumentSnapshot): TripMoment? {
+        val userId = document.getString("userId").orEmpty()
+        val imageUrl = document.getString("imageUrl").orEmpty()
+        if (userId.isBlank() || imageUrl.isBlank()) return null
+
+        return TripMoment(
+            id = document.getString("id")?.ifBlank { document.id } ?: document.id,
+            tripId = document.getString("tripId").orEmpty(),
+            userId = userId,
+            userName = document.getString("userName").orEmpty(),
+            imageUrl = imageUrl,
+            description = document.getString("description").orEmpty(),
+            latitude = document.getDouble("latitude") ?: 0.0,
+            longitude = document.getDouble("longitude") ?: 0.0,
+            locationName = document.getString("locationName").orEmpty(),
             createdAt = document.getTimestamp("createdAt")
         )
     }

@@ -14,6 +14,7 @@ data class Trip(
     val invitedUserIds: List<String> = emptyList(),
     val dailyPhotoNotificationRate: Double = 0.0,
     val totalPhotoNotifications: Int = 0,
+    val sharedMomentsCount: Int = 0,
     val likeCount: Int = 0,
     val commentCount: Int = 0,
     val createdAt: Timestamp? = null

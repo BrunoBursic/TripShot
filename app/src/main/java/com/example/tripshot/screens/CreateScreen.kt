@@ -1,8 +1,6 @@
 package com.example.tripshot.screens
 
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -60,7 +58,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.setValue
@@ -70,7 +67,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -90,6 +86,7 @@ import com.example.tripshot.ui.theme.TripShotPrimary
 import com.example.tripshot.ui.theme.TripShotTextPrimary
 import com.example.tripshot.ui.theme.TripShotTextSecondary
 import com.example.tripshot.util.TripNotificationCalculator
+import com.example.tripshot.util.rememberImageBitmapFromUri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
@@ -167,8 +164,7 @@ fun CreateScreen(
             availableUsers
                 .filter { user ->
                     user.uid.isNotBlank() &&
-                        user.name.contains(normalizedSearchQuery, ignoreCase = true) &&
-                        !selectedInviteeIds.contains(user.uid)
+                        user.name.contains(normalizedSearchQuery, ignoreCase = true)
                 }
                 .take(8)
         }
@@ -246,6 +242,7 @@ fun CreateScreen(
                 onSearchQueryChange = { searchQuery = it },
                 invitees = invitees,
                 searchResults = inviteSearchResults,
+                selectedInviteeIds = selectedInviteeIds,
                 onSelectInvitee = { selectedUser ->
                     if (invitees.none { it.uid == selectedUser.uid }) {
                         invitees.add(InviteeUi(uid = selectedUser.uid, name = selectedUser.name))
@@ -421,26 +418,6 @@ fun CoverSection(
             }
         }
     }
-}
-
-@Composable
-private fun rememberImageBitmapFromUri(uri: Uri?): ImageBitmap? {
-    val context = LocalContext.current
-    val contentResolver = context.contentResolver
-
-    val imageBitmapState by produceState<ImageBitmap?>(initialValue = null, uri) {
-        value = uri?.let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val source = android.graphics.ImageDecoder.createSource(contentResolver, it)
-                android.graphics.ImageDecoder.decodeBitmap(source).asImageBitmap()
-            } else {
-                @Suppress("DEPRECATION")
-                MediaStore.Images.Media.getBitmap(contentResolver, it).asImageBitmap()
-            }
-        }
-    }
-
-    return imageBitmapState
 }
 
 @Composable
@@ -727,8 +704,7 @@ fun TripScheduleSection(
         Text(
             text = stringResource(
                 R.string.create_trip_notification_note_formatted,
-                dailyPhotoNotificationRate,
-                TripNotificationCalculator.MAX_DAILY_PHOTO_NOTIFICATIONS.toInt()
+                dailyPhotoNotificationRate
             ),
             color = TripShotTextSecondary,
             fontSize = 12.sp,
@@ -806,6 +782,7 @@ fun InviteExplorersSection(
     onSearchQueryChange: (String) -> Unit,
     invitees: List<InviteeUi>,
     searchResults: List<User>,
+    selectedInviteeIds: Set<String>,
     onSelectInvitee: (User) -> Unit,
     onRemoveInvitee: (InviteeUi) -> Unit
 ) {
@@ -829,6 +806,7 @@ fun InviteExplorersSection(
                     searchResults.forEach { user ->
                         InviteSearchResultItem(
                             user = user,
+                            isAlreadyAdded = selectedInviteeIds.contains(user.uid),
                             onAddClick = { onSelectInvitee(user) }
                         )
                     }
@@ -892,6 +870,7 @@ fun SearchField(
 @Composable
 fun InviteSearchResultItem(
     user: User,
+    isAlreadyAdded: Boolean,
     onAddClick: () -> Unit
 ) {
     Surface(
@@ -908,15 +887,25 @@ fun InviteSearchResultItem(
         ) {
             Text(
                 text = user.name,
-                color = TripShotTextPrimary,
+                color = if (isAlreadyAdded) TripShotTextSecondary else TripShotTextPrimary,
                 fontWeight = FontWeight.SemiBold
             )
-            TextButton(onClick = onAddClick) {
+            if (isAlreadyAdded) {
                 Text(
-                    text = stringResource(R.string.create_trip_add_invitee),
-                    color = TripShotPrimary,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.create_trip_invitee_already_added),
+                    color = TripShotTextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
+            } else {
+                TextButton(onClick = onAddClick) {
+                    Text(
+                        text = stringResource(R.string.create_trip_add_invitee),
+                        color = TripShotPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

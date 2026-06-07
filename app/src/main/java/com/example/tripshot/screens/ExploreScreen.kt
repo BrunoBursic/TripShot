@@ -49,7 +49,8 @@ import com.google.firebase.firestore.ListenerRegistration
 
 @Composable
 fun ExploreScreen(
-    onUserSelected: (String) -> Unit = {}
+    onUserSelected: (String) -> Unit = {},
+    onTripClick: (String) -> Unit = {}
 ) {
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
@@ -247,7 +248,7 @@ fun ExploreScreen(
                         }
                     }
                 } else {
-                    CommunityTripsFeed(modifier = Modifier.fillMaxSize())
+                    CommunityTripsFeed(modifier = Modifier.fillMaxSize(), onTripClick = onTripClick)
                 }
             }
         }

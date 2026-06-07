@@ -109,7 +109,13 @@ class LoginActivity : ComponentActivity() {
     }
 
     private fun navigateToMainActivity() {
-        startActivity(Intent(this, MainActivity::class.java))
+        val mainIntent = Intent(this, MainActivity::class.java)
+        // FCM background tap delivers data extras to the launcher activity using the original
+        // FCM data keys (e.g. "tripId"). Translate and forward so MainActivity can deep-link.
+        intent?.getStringExtra("tripId")?.takeIf { it.isNotBlank() }?.let {
+            mainIntent.putExtra(MainActivity.EXTRA_PHOTO_PROMPT_TRIP_ID, it)
+        }
+        startActivity(mainIntent)
         finish()
     }
 }
