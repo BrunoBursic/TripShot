@@ -1,6 +1,7 @@
 package com.example.tripshot.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,7 +48,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
 @Composable
-fun ExploreScreen() {
+fun ExploreScreen(
+    onUserSelected: (String) -> Unit = {}
+) {
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val currentUserId = auth.currentUser?.uid
@@ -187,16 +190,22 @@ fun ExploreScreen() {
                                     val isFollowing = followingUserIds.contains(user.uid)
                                     val isRequestInProgress = followRequestsInProgress.contains(user.uid)
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = user.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.weight(1f)
-                                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = user.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        if (user.uid.isNotBlank()) {
+                                            onUserSelected(user.uid)
+                                        }
+                                    }
+                            )
 
                                         Spacer(modifier = Modifier.width(12.dp))
 
