@@ -10,5 +10,6 @@ data class AppNotification(
     val fromUserId: String = "",
     val fromUserName: String = "",
     val tripId: String = "",
+    val tripName: String = "",
     val createdAt: Timestamp? = null
 )

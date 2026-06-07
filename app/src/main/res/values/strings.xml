@@ -71,6 +71,9 @@
     <string name="notification_channel_followers_description">Alerts when someone starts following you</string>
     <string name="notification_channel_photo_prompts_name">Photo prompts</string>
     <string name="notification_channel_photo_prompts_description">Reminders to capture a moment during your trip</string>
+    <string name="notification_channel_trips_name">Trips</string>
+    <string name="notification_channel_trips_description">Updates about trips you\'ve been added to</string>
+    <string name="create_trip_invitee_already_added">Already added</string>
     <string name="explore_search_placeholder">Search users by name</string>
     <string name="explore_search_hint">Type a name to find users</string>
     <string name="explore_no_users_found">No users found</string>
@@ -231,4 +234,26 @@
     <string name="content_desc_captured_photo">Captured photo</string>
     <string name="content_desc_photo_prompt_camera">Camera icon</string>
     <string name="photo_prompt_location_fetching">Getting location…</string>
+
+    <!-- Photo Prompt Floating Pill -->
+    <string name="photo_prompt_pill_title">Time to Capture!</string>
+    <string name="photo_prompt_pill_subtitle">Tap to add a moment to %1$s</string>
+    <string name="photo_prompt_pill_subtitle_no_trip">Tap to capture a moment</string>
+    <string name="content_desc_photo_prompt_pill">Open photo capture screen</string>
+
+    <!-- Trip Summary Screen -->
+    <string name="trip_summary_cover_content_desc">Trip cover photo</string>
+    <string name="trip_summary_completed_journey">COMPLETED JOURNEY</string>
+    <string name="trip_summary_duration_label">DURATION</string>
+    <string name="trip_summary_days_value">%1$d Days</string>
+    <string name="trip_summary_shared_memories_label">SHARED MEMORIES</string>
+    <string name="trip_summary_moments_value">%1$d Moments</string>
+    <string name="trip_summary_crew_label">THE CREW</string>
+    <string name="trip_summary_explorers_value">%1$d Explorers</string>
+    <string name="trip_summary_gallery_label">GALLERY</string>
+    <string name="trip_summary_visual_highlights">Visual Highlights</string>
+    <string name="trip_summary_view_all_moments">View all %1$d moments →</string>
+    <string name="trip_summary_trending">Trending</string>
+    <string name="trip_summary_no_moments">No photos shared yet</string>
+    <string name="trip_summary_done">Close Summary</string>
 </resources>

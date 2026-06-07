@@ -13,52 +13,77 @@ function channelForType(type) {
   switch (type) {
     case "new_follower": return "followers";
     case "photo_prompt": return "photo_prompts";
+    case "trip_invite": return "trips";
     default: return "general";
   }
 }
 
 /**
- * Computes N random notification timestamps spread across the trip's days,
- * each falling in the 08:00–22:00 UTC window on the assigned day.
+ * Schedules photo-prompt notifications across the trip's valid time windows.
  *
- * Notifications are distributed round-robin across members so each member
- * receives approximately totalCount / memberIds.length prompts.
+ * Uses dailyRate (from TripNotificationCalculator) to determine how many slots
+ * to place per day, and totalCount (also from the calculator) as the hard cap.
+ * Valid slots are 08:00–22:00 UTC+2, intersected with [startMs, endMs], so no
+ * notification can ever fire outside the trip window.
  *
- * @param {number} startMs  trip start (Unix ms)
- * @param {number} endMs    trip end   (Unix ms)
- * @param {number} totalCount  total notifications for the trip
+ * Members are assigned round-robin across all slots.
+ *
+ * @param {number}   startMs    trip start (Unix ms)
+ * @param {number}   endMs      trip end   (Unix ms)
+ * @param {number}   dailyRate  notifications per day (dailyPhotoNotificationRate from Kotlin)
+ * @param {number}   totalCount hard cap on total notifications (totalPhotoNotifications from Kotlin)
  * @param {string[]} memberIds  all trip members (creator + invitees)
  * @returns {{ userId: string, scheduledAt: admin.firestore.Timestamp }[]}
  */
-function buildSchedule(startMs, endMs, totalCount, memberIds) {
+function buildSchedule(startMs, endMs, dailyRate, totalCount, memberIds) {
   const ONE_DAY_MS = 86_400_000;
-  const actualDays = (endMs - startMs) / ONE_DAY_MS;
-  const durationInDays = Math.max(1, Math.ceil(actualDays));
+  const TIMEZONE_OFFSET_HOURS = 2;
+  const WINDOW_START_HOUR = 8;
+  const WINDOW_END_HOUR = 22;
+
+  // Midnight of the trip-start day in UTC+2.
+  const tripStartDay = new Date(startMs);
+  tripStartDay.setUTCHours(-TIMEZONE_OFFSET_HOURS, 0, 0, 0);
+  const dayZeroStartMs = tripStartDay.getTime();
+
+  // Build one valid [windowStart, windowEnd] per calendar day, clamped to trip bounds.
+  // Days where the trip has already ended before 08:00 or hasn't started by 22:00 are skipped.
+  const totalDaysSpanned = Math.ceil((endMs - dayZeroStartMs) / ONE_DAY_MS);
+  const validWindows = [];
+  for (let d = 0; d < totalDaysSpanned; d++) {
+    const dayStartMs = dayZeroStartMs + d * ONE_DAY_MS;
+    const windowStart = Math.max(dayStartMs + WINDOW_START_HOUR * 3_600_000, startMs);
+    const windowEnd   = Math.min(dayStartMs + WINDOW_END_HOUR   * 3_600_000, endMs);
+    if (windowStart < windowEnd) validWindows.push({ windowStart, windowEnd });
+  }
+
+  if (validWindows.length === 0) return [];
+
   const now = Date.now();
   const results = [];
+  let memberIndex = 0;
+  let remaining = totalCount;
 
-  for (let i = 0; i < totalCount; i++) {
-    const dayIndex = i % durationInDays;
-    const userId = memberIds[i % memberIds.length];
+  for (const { windowStart, windowEnd } of validWindows) {
+    if (remaining <= 0) break;
 
-    // Start of the target calendar day in UTC+2 (offset the UTC midnight back by 2 hours).
-    const TIMEZONE_OFFSET_HOURS = 2;
-    const tripStartDay = new Date(startMs);
-    tripStartDay.setUTCHours(-TIMEZONE_OFFSET_HOURS, 0, 0, 0);
-    const dayStartMs = tripStartDay.getTime() + dayIndex * ONE_DAY_MS;
+    // Stochastic rounding: floor(rate) slots guaranteed, +1 with probability equal to
+    // the fractional part. Over many days the expected total equals dailyRate * days = totalCount.
+    const base = Math.floor(dailyRate);
+    const countThisDay = Math.min(
+      base + (Math.random() < (dailyRate - base) ? 1 : 0),
+      remaining
+    );
 
-    // Random time between 08:00 and 21:59 local (UTC+2).
-    const randomHour = Math.floor(Math.random() * 14) + 8; // 8..21
-    const randomMinute = Math.floor(Math.random() * 60);
-    const triggerMs = dayStartMs + (randomHour * 3600 + randomMinute * 60) * 1000;
+    for (let j = 0; j < countThisDay; j++) {
+      const userId = memberIds[memberIndex % memberIds.length];
+      memberIndex++;
+      const triggerMs = Math.floor(windowStart + Math.random() * (windowEnd - windowStart));
+      if (triggerMs <= now) continue; // trip started in the past; skip elapsed slots
+      results.push({ userId, scheduledAt: admin.firestore.Timestamp.fromMillis(triggerMs) });
+    }
 
-    // Skip slots that have already passed.
-    if (triggerMs <= now) continue;
-
-    results.push({
-      userId,
-      scheduledAt: admin.firestore.Timestamp.fromMillis(triggerMs),
-    });
+    remaining -= countThisDay;
   }
 
   return results;
@@ -80,11 +105,12 @@ exports.schedulePhotoPrompts = onDocumentCreated({ document: "trips/{tripId}", r
   const startMs = tripData.startDateTimeMillis;
   const endMs = tripData.endDateTimeMillis;
   const totalCount = tripData.totalPhotoNotifications || 0;
-  const memberIds = tripData.memberIds || [];
+  const dailyRate  = tripData.dailyPhotoNotificationRate || 0;
+  const memberIds  = tripData.memberIds || [];
 
-  if (!startMs || !endMs || totalCount === 0 || memberIds.length === 0) return;
+  if (!startMs || !endMs || totalCount === 0 || dailyRate === 0 || memberIds.length === 0) return;
 
-  const slots = buildSchedule(startMs, endMs, totalCount, memberIds);
+  const slots = buildSchedule(startMs, endMs, dailyRate, totalCount, memberIds);
   if (slots.length === 0) return;
 
   // Write all schedule docs in batches of 500 (Firestore batch limit).
@@ -105,7 +131,43 @@ exports.schedulePhotoPrompts = onDocumentCreated({ document: "trips/{tripId}", r
 });
 
 /**
- * 2. Runs every 15 minutes.
+ * 2. Triggered when a new trip document is created.
+ *    Sends a "you've been added to a trip" notification to every invited user.
+ */
+exports.notifyTripInvitees = onDocumentCreated({ document: "trips/{tripId}", region: "europe-west1" }, async (event) => {
+  const tripData = event.data.data();
+  if (!tripData) return;
+
+  const tripId = event.params.tripId;
+  const tripName = tripData.name || "";
+  const creatorId = tripData.creatorId || "";
+  const creatorName = tripData.creatorName || "";
+  const invitedUserIds = tripData.invitedUserIds || [];
+
+  if (invitedUserIds.length === 0) return;
+
+  const BATCH_SIZE = 500;
+  for (let i = 0; i < invitedUserIds.length; i += BATCH_SIZE) {
+    const batch = db.batch();
+    invitedUserIds.slice(i, i + BATCH_SIZE).forEach((userId) => {
+      const notifRef = db.collection("users").doc(userId).collection("notifications").doc();
+      batch.set(notifRef, {
+        type: "trip_invite",
+        title: "You've been added to a trip!",
+        message: `${creatorName} added you to ${tripName}`,
+        tripId,
+        tripName,
+        fromUserId: creatorId,
+        fromUserName: creatorName,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+    await batch.commit();
+  }
+});
+
+/**
+ * 3. Runs every 15 minutes.
  *    Fetches all due schedule docs (scheduledAt <= now), creates a
  *    notification doc for each member (which triggers sendPushNotification),
  *    and deletes the schedule doc — atomically in a batch.
@@ -147,7 +209,7 @@ exports.dispatchDuePhotoPrompts = onSchedule({ schedule: "every 15 minutes", reg
 });
 
 /**
- * 3. Triggered when any notification doc is created in users/{userId}/notifications.
+ * 4. Triggered when any notification doc is created in users/{userId}/notifications.
  *    Looks up the user's FCM token and sends a push notification.
  *    Passes tripId in the data payload so the app can deep-link to the prompt screen.
  */

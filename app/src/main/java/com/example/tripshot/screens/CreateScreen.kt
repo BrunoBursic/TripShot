@@ -164,8 +164,7 @@ fun CreateScreen(
             availableUsers
                 .filter { user ->
                     user.uid.isNotBlank() &&
-                        user.name.contains(normalizedSearchQuery, ignoreCase = true) &&
-                        !selectedInviteeIds.contains(user.uid)
+                        user.name.contains(normalizedSearchQuery, ignoreCase = true)
                 }
                 .take(8)
         }
@@ -243,6 +242,7 @@ fun CreateScreen(
                 onSearchQueryChange = { searchQuery = it },
                 invitees = invitees,
                 searchResults = inviteSearchResults,
+                selectedInviteeIds = selectedInviteeIds,
                 onSelectInvitee = { selectedUser ->
                     if (invitees.none { it.uid == selectedUser.uid }) {
                         invitees.add(InviteeUi(uid = selectedUser.uid, name = selectedUser.name))
@@ -782,6 +782,7 @@ fun InviteExplorersSection(
     onSearchQueryChange: (String) -> Unit,
     invitees: List<InviteeUi>,
     searchResults: List<User>,
+    selectedInviteeIds: Set<String>,
     onSelectInvitee: (User) -> Unit,
     onRemoveInvitee: (InviteeUi) -> Unit
 ) {
@@ -805,6 +806,7 @@ fun InviteExplorersSection(
                     searchResults.forEach { user ->
                         InviteSearchResultItem(
                             user = user,
+                            isAlreadyAdded = selectedInviteeIds.contains(user.uid),
                             onAddClick = { onSelectInvitee(user) }
                         )
                     }
@@ -868,6 +870,7 @@ fun SearchField(
 @Composable
 fun InviteSearchResultItem(
     user: User,
+    isAlreadyAdded: Boolean,
     onAddClick: () -> Unit
 ) {
     Surface(
@@ -884,15 +887,25 @@ fun InviteSearchResultItem(
         ) {
             Text(
                 text = user.name,
-                color = TripShotTextPrimary,
+                color = if (isAlreadyAdded) TripShotTextSecondary else TripShotTextPrimary,
                 fontWeight = FontWeight.SemiBold
             )
-            TextButton(onClick = onAddClick) {
+            if (isAlreadyAdded) {
                 Text(
-                    text = stringResource(R.string.create_trip_add_invitee),
-                    color = TripShotPrimary,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.create_trip_invitee_already_added),
+                    color = TripShotTextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
+            } else {
+                TextButton(onClick = onAddClick) {
+                    Text(
+                        text = stringResource(R.string.create_trip_add_invitee),
+                        color = TripShotPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

@@ -35,6 +35,7 @@ class TripShotMessagingService : FirebaseMessagingService() {
         val channelId = when (type) {
             TYPE_NEW_FOLLOWER -> CHANNEL_FOLLOWERS
             TYPE_PHOTO_PROMPT -> CHANNEL_PHOTO_PROMPTS
+            TYPE_TRIP_INVITE -> CHANNEL_TRIPS
             else -> CHANNEL_GENERAL
         }
 
@@ -98,6 +99,10 @@ class TripShotMessagingService : FirebaseMessagingService() {
                 getString(R.string.notification_channel_photo_prompts_name),
                 getString(R.string.notification_channel_photo_prompts_description)
             )
+            CHANNEL_TRIPS -> Pair(
+                getString(R.string.notification_channel_trips_name),
+                getString(R.string.notification_channel_trips_description)
+            )
             else -> Pair("General", "General notifications")
         }
         manager.createNotificationChannel(
@@ -109,9 +114,11 @@ class TripShotMessagingService : FirebaseMessagingService() {
     companion object {
         const val CHANNEL_FOLLOWERS = "followers"
         const val CHANNEL_PHOTO_PROMPTS = "photo_prompts"
+        const val CHANNEL_TRIPS = "trips"
         const val CHANNEL_GENERAL = "general"
 
         const val TYPE_NEW_FOLLOWER = "new_follower"
         const val TYPE_PHOTO_PROMPT = "photo_prompt"
+        const val TYPE_TRIP_INVITE = "trip_invite"
     }
 }
