@@ -21,15 +21,4 @@ object PhotoPromptPrefs {
         val existing = prefs.getStringSet("handled_$uid", emptySet()) ?: emptySet()
         prefs.edit().putStringSet("handled_$uid", existing + notifId).apply()
     }
-
-    /**
-     * Marks all notification IDs whose tripId matches [tripId] as handled.
-     * Used when a system-notification tap deep-links directly to the capture screen
-     * (where only tripId is available from the FCM extras, not the notification doc id).
-     */
-    fun markHandledByTripId(context: Context, uid: String, tripId: String, allPrompts: List<String>) {
-        val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
-        val existing = prefs.getStringSet("handled_$uid", emptySet()) ?: emptySet()
-        prefs.edit().putStringSet("handled_$uid", existing + allPrompts).apply()
-    }
 }
